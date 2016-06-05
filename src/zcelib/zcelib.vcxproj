@@ -41,6 +41,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>zenlib</RootNamespace>
     <ProjectName>zcelib</ProjectName>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -86,10 +87,10 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(SolutionDir)../lib/$(PlatformName)-$(PlatformToolset)-$(Configuration)/</OutDir>
+    <OutDir>$(SolutionDir)../lib/win/$(PlatformName)-$(PlatformToolset)-$(Configuration)/</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SolutionDir)../lib/$(PlatformName)-$(PlatformToolset)-$(Configuration)/</OutDir>
+    <OutDir>$(SolutionDir)../lib/win/$(PlatformName)-$(PlatformToolset)-$(Configuration)/</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IntDir>$(SolutionDir)../obj/$(PlatformName)-$(PlatformToolset)-$(Configuration)/$(ProjectName)/</IntDir>
@@ -100,10 +101,10 @@
     <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(SolutionDir)../lib/$(PlatformName)-$(PlatformToolset)-$(Configuration)/</OutDir>
+    <OutDir>$(SolutionDir)../lib/win/$(PlatformName)-$(PlatformToolset)-$(Configuration)/</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)../lib/$(PlatformName)-$(PlatformToolset)-$(Configuration)/</OutDir>
+    <OutDir>$(SolutionDir)../lib/win/$(PlatformName)-$(PlatformToolset)-$(Configuration)/</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IntDir>$(SolutionDir)../obj/$(PlatformName)-$(PlatformToolset)-$(Configuration)/$(ProjectName)/</IntDir>
