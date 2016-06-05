@@ -23,10 +23,12 @@ obj
 *.pdb
 *.ilk
 *.lastbuildstate
+*.user
 
 *.sdf
 *.opensdf
 
+.vs
 *.suo
 *.obj
 *.ncb
