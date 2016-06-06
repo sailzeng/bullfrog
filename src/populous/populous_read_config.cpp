@@ -39,24 +39,43 @@ void Illusion_Read_Config::clean_instance()
 
 //
 bool Illusion_Read_Config::initialize(bool need_open_excel,
-                                      const std::string &config_path)
+                                      const QString &config_path_str,
+                                      const QString &db3_path_str,
+                                      const QString &outlog_path_str)
 {
-    config_path_ = config_path;
+    config_path_.setPath(config_path_str);
+    if (config_path_.exists())
+    {
+        return false;
+    }
 
     //db3的路径没有可以创建
-    sqlitedb_pah_ = config_path_;
-    ZCE_LIB::path_string_cat(sqlitedb_pah_, "db3");
-    if (false == ZCE_LIB::is_directory(sqlitedb_pah_.c_str()))
+    QString temp_str = db3_path_str;
+    if (db3_path_str.isEmpty())
     {
-        ZCE_LIB::mkdir_recurse(sqlitedb_pah_.c_str());
+        temp_str = config_path_str + "/db3";
+    }
+    sqlitedb_pah_.setPath(temp_str);
+    if (false == sqlitedb_pah_.exists())
+    {
+        sqlitedb_pah_.mkpath(temp_str);
     }
 
     //log的路径没有可以创建
-    outlog_dir_path_ = config_path_;
-    ZCE_LIB::path_string_cat(outlog_dir_path_, "log");
-    if (false == ZCE_LIB::is_directory(outlog_dir_path_.c_str()))
+    temp_str = outlog_path_str;
+    if (outlog_path_str.isEmpty())
     {
-        ZCE_LIB::mkdir_recurse(outlog_dir_path_.c_str());
+        temp_str = config_path_str + "/log";
+    }
+    outlog_dir_path_.setPath(temp_str);
+    if (false == outlog_dir_path_.exists())
+    {
+        outlog_dir_path_.mkpath(temp_str);
+        //建立目录后进行一次检查
+        if (false == outlog_dir_path_.exists())
+        {
+            return false;
+        }
     }
 
     need_open_excel_ = need_open_excel;

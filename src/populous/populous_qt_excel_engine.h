@@ -24,14 +24,16 @@ typedef unsigned int UINT;
 class QtExcelEngine : protected QObject
 {
 public:
+
+    //构造函数和析构函数
     QtExcelEngine();
-    QtExcelEngine(QString xlsFile);
     ~QtExcelEngine();
 
 public:
 
     //打开xls文件
     bool open(UINT nSheet = 1, bool visible = false);
+    //
     bool open(QString xlsFile, UINT nSheet = 1, bool visible = false);
 
     ///

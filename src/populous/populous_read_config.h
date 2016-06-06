@@ -8,11 +8,10 @@ class Illusion_Read_Config
 public:
 
 
-
     struct TABLE_CONFIG
     {
         ///表格名称
-        CString excel_table_name_;
+        QString excel_table_name_;
 
         ///表格数据从第几行读取
         long read_data_start_ = 3;
@@ -56,10 +55,10 @@ public:
     };
 
     ///枚举值的对应关系表
-    typedef std::map <CString, CString >  MAP_CSTRING_TO_CSTRING;
+    typedef std::map <QString, QString >  MAP_CSTRING_TO_CSTRING;
 
     ///
-    typedef std::map <CString, TABLE_CONFIG> MAP_TABLE_TO_CONFIG;
+    typedef std::map <QString, TABLE_CONFIG> MAP_TABLE_TO_CONFIG;
 
     ///
     struct EXCEL_FILE_DATA
@@ -69,7 +68,7 @@ public:
         MAP_TABLE_TO_CONFIG  xls_table_cfg_;
     };
 
-    typedef std::map <CString, EXCEL_FILE_DATA> MAP_FNAME_TO_CFGDATA;
+    typedef std::map <QString, EXCEL_FILE_DATA> MAP_FNAME_TO_CFGDATA;
 
 protected: // 仅从序列化创建
     Illusion_Read_Config();
@@ -89,7 +88,9 @@ public:
 
     ///初始化
     bool initialize(bool need_open_excel,
-                    const std::string &config_path);
+                    const QString &config_path_str,
+                    const QString &db3_path_str,
+                    const QString &log_path_str);
     //
     void finalize();
 
@@ -98,7 +99,7 @@ public:
     * @return     int
     * @param      open_file 打开的EXCEL文件名称，名称MFC
     */
-    int read_excel_byucname(const CString &open_file);
+    int read_excel_byucname(const QString &open_file);
 
     /*!
     * @brief
@@ -160,30 +161,24 @@ protected:
 protected:
 
     ///配置路径
-    std::string config_path_;
+    QDir config_path_;
 
     ///日志输出的目录
-    std::string outlog_dir_path_;
+    QDir outlog_dir_path_;
 
     ///DB3文件输出的目录
-    std::string sqlitedb_pah_;
+    QDir sqlitedb_pah_;
 
     bool need_open_excel_ = false;
 
     ///Excel的处理对象,EXCEL的处理类
-    Illusion_ExcelFile ils_excel_file_;
+    QtExcelEngine ils_excel_file_;
 
     ///
     Illusion_Protobuf_Reflect ils_proto_reflect_;
 
     ///文件对应的配置数据，用于我的查询
     MAP_FNAME_TO_CFGDATA   file_cfg_map_;
-
-
-
-
-
-
 
 
 

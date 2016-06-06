@@ -1,8 +1,11 @@
 #ifndef POPULOUS_PREDEFINE_H_
 #define POPULOUS_PREDEFINE_H_
 
+#include <map>
+
 #include "zce_predefine.h"
 #include "zce_trace_debugging.h"
+#include "zce_sqlite_conf_table.h"
 #include "zce_os_adapt_string.h"
 
 
@@ -20,7 +23,7 @@
 #include <QtCore/QDebug>
 #include <QtGui/QKeyEvent>
 #include <QtCore/QVariant>
-
+#include <QtCore/QDir> 
 
 #include <QtWidgets/QTableWidget>
 #include <QtWidgets/QTableView>

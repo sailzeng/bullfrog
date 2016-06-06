@@ -27,31 +27,6 @@ QtExcelEngine::QtExcelEngine()
     }
 }
 
-QtExcelEngine::QtExcelEngine(QString xlsFile)
-{
-    excel_instance_     = NULL;
-    work_books_ = NULL;
-    active_book_  = NULL;
-    active_sheet_ = NULL;
-
-    xls_file_     = xlsFile;
-    row_count_    = 0;
-    column_count_ = 0;
-    start_row_    = 0;
-    start_column_ = 0;
-
-    is_open_     = false;
-    is_valid_    = false;
-    is_a_newfile_ = false;
-    is_save_already_ = false;
-
-    HRESULT r = ::OleInitialize(0);
-    if (r != S_OK && r != S_FALSE)
-    {
-        qDebug("Qt: Could not initialize OLE (error %x)", (unsigned int)r);
-    }
-}
-
 QtExcelEngine::~QtExcelEngine()
 {
     if ( is_open_ )
@@ -62,12 +37,44 @@ QtExcelEngine::~QtExcelEngine()
     ::OleUninitialize();
 }
 
+
+//初始化EXCEL文件，
+bool QtExcelEngine::init_excel(bool visible)
+{
+
+    HRESULT r = ::OleInitialize(0);
+    if (r != S_OK && r != S_FALSE)
+    {
+        qDebug("Qt: Could not initialize OLE (error %x)", (unsigned int)r);
+    }
+    is_visible_ = visible;
+    //
+    if (NULL == excel_instance_)
+    {
+        excel_instance_ = new QAxObject("Excel.Application");
+        if (excel_instance_)
+        {
+            is_valid_ = true;
+        }
+        else
+        {
+            is_valid_ = false;
+            is_open_ = false;
+            return is_open_;
+        }
+
+        excel_instance_->dynamicCall("SetVisible(bool)", is_visible_);
+    }
+    return TRUE;
+}
+
+
 /**
   *@brief 打开sXlsFile指定的excel报表
   *@return true : 打开成功
   *        false: 打开失败
   */
-bool QtExcelEngine::open(UINT nSheet, bool visible)
+bool QtExcelEngine::open(UINT nSheet)
 {
 
     if ( is_open_ )
@@ -77,7 +84,7 @@ bool QtExcelEngine::open(UINT nSheet, bool visible)
     }
 
     curr_sheet_ = nSheet;
-    is_visible_ = visible;
+    
 
     if ( NULL == excel_instance_ )
     {
@@ -130,9 +137,12 @@ bool QtExcelEngine::open(UINT nSheet, bool visible)
     }
     else
     {
-        work_books_ = excel_instance_->querySubObject("WorkBooks");     //获取工作簿
-        work_books_->dynamicCall("Add");                       //添加一个新的工作薄
-        active_book_  = excel_instance_->querySubObject("ActiveWorkBook"); //新建一个xls
+        //获取工作簿
+        work_books_ = excel_instance_->querySubObject("WorkBooks");     
+        //添加一个新的工作薄
+        work_books_->dynamicCall("Add");                       
+        //新建一个xls
+        active_book_  = excel_instance_->querySubObject("ActiveWorkBook"); 
     }
 
     //

@@ -532,7 +532,7 @@ int Illusion_Protobuf_Reflect::set_field(google::protobuf::Message *msg,
     return 0;
 }
 
-//用MBCS 的coding 编码方式输出一个MESSAGE的信息，方便查看。
+//用UTF8 的coding 编码方式输出一个MESSAGE的信息，方便查看。
 void Illusion_Protobuf_Reflect::protobuf_output(const google::protobuf::Message *msg,
                                                 std::ostream *out)
 {
@@ -583,9 +583,7 @@ void Illusion_Protobuf_Reflect::protobuf_output(const google::protobuf::Message 
             else if (field_desc->type() == google::protobuf::FieldDescriptor::Type::TYPE_STRING)
             {
                 std::string utf8_string = reflection->GetString(*msg, field_desc);
-                std::string mbcs_string;
-                Coding_Convert::instance()->utf8_to_mbcs(utf8_string, mbcs_string);
-                *out << mbcs_string << std::endl;
+                *out << utf8_string << std::endl;
             }
             else if (field_desc->type() == google::protobuf::FieldDescriptor::Type::TYPE_MESSAGE)
             {
@@ -704,11 +702,9 @@ void Illusion_Protobuf_Reflect::protobuf_output(const google::protobuf::Message 
                 for (int j = 0; j < field_size; ++j)
                 {
                     std::string utf8_string = reflection->GetRepeatedString(*msg, field_desc, j);
-                    std::string mbcs_string;
-                    Coding_Convert::instance()->utf8_to_mbcs(utf8_string, mbcs_string);
 
                     *out << "\t" << field_desc->full_name() << ":" <<
-                         mbcs_string << std::endl;
+                        utf8_string << std::endl;
                 }
             }
             else if (field_desc->type() == google::protobuf::FieldDescriptor::Type::TYPE_MESSAGE)
