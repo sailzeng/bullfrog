@@ -1,7 +1,7 @@
 #ifndef POPULOUS_PREDEFINE_H_
 #define POPULOUS_PREDEFINE_H_
 
-#include <map>
+
 
 #include "zce_predefine.h"
 #include "zce_trace_debugging.h"
@@ -29,10 +29,9 @@
 #include <QtWidgets/QTableView>
 #include <QtWidgets/QTableWidgetItem>
 
-
-
-
 #pragma warning ( pop )
+
+#include <map>
 
 #endif //
 
