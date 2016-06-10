@@ -10,7 +10,9 @@ QtExcelEngine::QtExcelEngine()
     active_sheet_ = NULL;
 
     xls_file_     = "";
-    row_count_    = 0;
+
+    curr_sheet_ = 1;
+    row_count_ = 0;
     column_count_ = 0;
     start_row_    = 0;
     start_column_ = 0;
@@ -20,11 +22,6 @@ QtExcelEngine::QtExcelEngine()
     is_a_newfile_ = false;
     is_save_already_ = false;
 
-    HRESULT r = ::OleInitialize(0);
-    if (r != S_OK && r != S_FALSE)
-    {
-        qDebug("Qt: Could not initialize OLE (error %x)", (unsigned int)r);
-    }
 }
 
 QtExcelEngine::~QtExcelEngine()
@@ -34,7 +31,7 @@ QtExcelEngine::~QtExcelEngine()
         //析构前，先保存数据，然后关闭workbook
         close();
     }
-    ::OleUninitialize();
+    release_excel();
 }
 
 
@@ -69,49 +66,51 @@ bool QtExcelEngine::init_excel(bool visible)
 }
 
 
-/**
-  *@brief 打开sXlsFile指定的excel报表
-  *@return true : 打开成功
-  *        false: 打开失败
-  */
-bool QtExcelEngine::open(UINT nSheet)
+//
+void QtExcelEngine::release_excel()
 {
+    if (excel_instance_ )
+    {
 
-    if ( is_open_ )
+        excel_instance_->dynamicCall("Quit()");
+
+        delete excel_instance_;
+        excel_instance_ = NULL;
+
+        is_open_ = false;
+        is_valid_ = false;
+        is_a_newfile_ = false;
+        is_save_already_ = true;
+    }
+
+    ::OleUninitialize();
+}
+
+
+/**
+  *@brief Open()的重载函数
+  */
+bool QtExcelEngine::open(const QString &xls_file, int  sheet_index)
+{
+    xls_file_ = xls_file;
+    curr_sheet_ = sheet_index;
+    if (is_open_)
     {
         //return bIsOpen;
         close();
     }
 
-    curr_sheet_ = nSheet;
-    
+    curr_sheet_ = sheet_index;
 
-    if ( NULL == excel_instance_ )
+    if (!is_valid_)
     {
-        excel_instance_ = new QAxObject("Excel.Application");
-        if ( excel_instance_ )
-        {
-            is_valid_ = true;
-        }
-        else
-        {
-            is_valid_ = false;
-            is_open_  = false;
-            return is_open_;
-        }
-
-        excel_instance_->dynamicCall("SetVisible(bool)", is_visible_);
-    }
-
-    if ( !is_valid_ )
-    {
-        is_open_  = false;
+        is_open_ = false;
         return is_open_;
     }
 
-    if ( xls_file_.isEmpty() )
+    if (xls_file_.isEmpty())
     {
-        is_open_  = false;
+        is_open_ = false;
         is_a_newfile_ = true;
         //return bIsOpen;
     }
@@ -132,50 +131,28 @@ bool QtExcelEngine::open(UINT nSheet)
 
     if (!is_a_newfile_)
     {
-        work_books_ = excel_instance_->querySubObject("WorkBooks"); //获取工作簿
-        active_book_ = work_books_->querySubObject("Open(QString, QVariant)", xls_file_, QVariant(0)); //打开xls对应的工作簿
+        //获取工作簿
+        work_books_ = excel_instance_->querySubObject("WorkBooks"); 
+        //打开xls对应的工作簿
+        active_book_ = work_books_->querySubObject("Open(QString, QVariant)", xls_file_, QVariant(0)); 
     }
     else
     {
         //获取工作簿
-        work_books_ = excel_instance_->querySubObject("WorkBooks");     
+        work_books_ = excel_instance_->querySubObject("WorkBooks");
         //添加一个新的工作薄
-        work_books_->dynamicCall("Add");                       
+        work_books_->dynamicCall("Add");
         //新建一个xls
-        active_book_  = excel_instance_->querySubObject("ActiveWorkBook"); 
+        active_book_ = excel_instance_->querySubObject("ActiveWorkBook");
     }
 
-    //
-    work_sheets_ = active_book_->querySubObject("WorkSheets");
-    //打开第一个sheet
-    active_sheet_ = active_book_->querySubObject("WorkSheets(int)", curr_sheet_);
+	work_sheets_ = active_book_->querySubObject("WorkSheets");
 
-    //至此已打开，开始获取相应属性
-    QAxObject *usedrange = active_sheet_->querySubObject("UsedRange");//获取该sheet的使用范围对象
-    QAxObject *rows = usedrange->querySubObject("Rows");
-    QAxObject *columns = usedrange->querySubObject("Columns");
+	//至此已打开
+    load_sheet(curr_sheet_);
 
-    //因为excel可以从任意行列填数据而不一定是从0,0开始，因此要获取首行列下标
-    start_row_    = usedrange->property("Row").toInt();    //第一行的起始位置
-    start_column_ = usedrange->property("Column").toInt(); //第一列的起始位置
-
-    row_count_    = rows->property("Count").toInt();       //获取行数
-    column_count_ = columns->property("Count").toInt();    //获取列数
-
-    is_open_  = true;
+    is_open_ = true;
     return is_open_;
-}
-
-/**
-  *@brief Open()的重载函数
-  */
-bool QtExcelEngine::open(QString xlsFile, UINT nSheet, bool visible)
-{
-    xls_file_ = xlsFile;
-    curr_sheet_ = nSheet;
-    is_visible_ = visible;
-
-    return open(curr_sheet_, is_visible_);
 }
 
 /**
@@ -228,13 +205,95 @@ void QtExcelEngine::close()
     }
 }
 
+//
+int QtExcelEngine::sheets_count()
+{
+    return work_books_->property("Count").toInt();
+}
+
+//得到某个sheet的名字
+bool QtExcelEngine::get_sheet_name(int sheet_index, QString &sheet_name)
+{
+    QAxObject *sheet_tmp = active_book_->querySubObject("WorkSheets(int)", sheet_index);
+    if (!sheet_tmp)
+    {
+        return false;
+    }
+    sheet_name = sheet_tmp->property("Name").toString();
+    return true;
+}
+
+bool QtExcelEngine::load_sheet(int sheet_index)
+{
+    active_sheet_ = active_book_->querySubObject("WorkSheets(int)", sheet_index);
+
+    //如果没有打开，
+    if (!active_sheet_)
+    {
+        return false;
+    }
+	load_sheet_internal();
+    return true;
+}
+
+
+
+//按照序号加载Sheet表格,
+bool QtExcelEngine::load_sheet(const QString &sheet_name)
+{
+    active_sheet_ = active_book_->querySubObject("WorkSheets(QString)", sheet_name);
+    //如果没有打开，
+    if (!active_sheet_)
+    {
+        return false;
+    }
+	load_sheet_internal();
+    return true;
+}
+
+bool QtExcelEngine::has_sheet(const QString & sheet_name)
+{
+	QAxObject *temp_sheet = active_book_->querySubObject("WorkSheets(QString)", sheet_name);
+	if (!temp_sheet)
+	{
+		return false;
+	}
+	return false;
+}
+
+void QtExcelEngine::load_sheet_internal()
+{
+	//获取该sheet的使用范围对象
+	QAxObject *used_range = active_sheet_->querySubObject("UsedRange");
+	QAxObject *rows = used_range->querySubObject("Rows");
+	QAxObject *columns = used_range->querySubObject("Columns");
+
+	//因为excel可以从任意行列填数据而不一定是从0,0开始，因此要获取首行列下标
+	//第一行的起始位置
+	start_row_ = used_range->property("Row").toInt();
+	//第一列的起始位置
+	start_column_ = used_range->property("Column").toInt();
+	//获取行数
+	row_count_ = rows->property("Count").toInt();
+	//获取列数
+	column_count_ = columns->property("Count").toInt();
+	return;
+}
+
+
+///打开的xls文件名称
+QString QtExcelEngine::open_filename() const
+{
+	return xls_file_;
+}
+
 /**
   *@brief 把tableWidget中的数据保存到excel中
   *@param tableWidget : 指向GUI中的tablewidget指针
   *@return 保存成功与否 true : 成功
   *                  false: 失败
   */
-bool QtExcelEngine::saveTableData(QTableWidget *tableWidget)
+bool QtExcelEngine::write_tabledata(QTableWidget *tableWidget)
 {
     if ( NULL == tableWidget )
     {
@@ -253,7 +312,7 @@ bool QtExcelEngine::saveTableData(QTableWidget *tableWidget)
     {
         if ( tableWidget->horizontalHeaderItem(i) != NULL )
         {
-            this->SetCellData(1, i + 1, tableWidget->horizontalHeaderItem(i)->text());
+            this->set_cell(1, i + 1, tableWidget->horizontalHeaderItem(i)->text());
         }
     }
 
@@ -264,7 +323,7 @@ bool QtExcelEngine::saveTableData(QTableWidget *tableWidget)
         {
             if ( tableWidget->item(i, j) != NULL )
             {
-                this->SetCellData(i + 2, j + 1, tableWidget->item(i, j)->text());
+                this->set_cell(i + 2, j + 1, tableWidget->item(i, j)->text());
             }
         }
     }
@@ -281,7 +340,7 @@ bool QtExcelEngine::saveTableData(QTableWidget *tableWidget)
   *@return 导入成功与否 true : 成功
   *                   false: 失败
   */
-bool QtExcelEngine::readTableData(QTableWidget *tableWidget)
+bool QtExcelEngine::read_tabledata(QTableWidget *tableWidget)
 {
     if ( NULL == tableWidget )
     {
@@ -334,13 +393,8 @@ bool QtExcelEngine::readTableData(QTableWidget *tableWidget)
     return true;
 }
 
-/**
-  *@brief 获取指定单元格的数据
-  *@param row : 单元格的行号
-  *@param column : 单元格的列号
-  *@return [row,column]单元格对应的数据
-  */
-QVariant QtExcelEngine::GetCellData(UINT row, UINT column)
+
+QVariant QtExcelEngine::get_cell(int row, int column)
 {
     QVariant data;
 
@@ -361,7 +415,7 @@ QVariant QtExcelEngine::GetCellData(UINT row, UINT column)
   *@return 修改是否成功 true : 成功
   *                   false: 失败
   */
-bool QtExcelEngine::SetCellData(UINT row, UINT column, QVariant data)
+bool QtExcelEngine::set_cell(int row, int column,const QVariant &data)
 {
     bool op = false;
 
@@ -415,7 +469,7 @@ bool QtExcelEngine::IsValid()
 /**
   *@brief 获取excel的行数
   */
-UINT QtExcelEngine::GetRowCount()const
+int QtExcelEngine::row_count()const
 {
     return row_count_;
 }
@@ -423,15 +477,45 @@ UINT QtExcelEngine::GetRowCount()const
 /**
   *@brief 获取excel的列数
   */
-UINT QtExcelEngine::GetColumnCount()const
+int QtExcelEngine::column_count()const
 {
     return column_count_;
 }
 
-void QtExcelEngine::insertSheet(const QString &sheetName)
+//
+void QtExcelEngine::insert_sheet(const QString &sheet_name)
 {
     work_sheets_->querySubObject("Add()");
     QAxObject *a = work_sheets_->querySubObject("Item(int)", 1);
-    a->setProperty("Name", sheetName);
+    a->setProperty("Name", sheet_name);
     active_sheet_ = a;
+
+	load_sheet_internal();
+}
+
+
+//取得列的名称，比如27->AA
+char *QtExcelEngine::column_name(int column_no)
+{
+	static char column_name[64];
+	size_t str_len = 0;
+
+	while (column_no > 0)
+	{
+		int num_data = column_no % 26;
+		column_no /= 26;
+		if (num_data == 0)
+		{
+			num_data = 26;
+			column_no--;
+		}
+		//不知道这个对不，
+		column_name[str_len] = (char)((num_data - 1) + ('A'));
+		str_len++;
+	}
+	column_name[str_len] = '\0';
+	//反转
+	strrev(column_name);
+
+	return column_name;
 }

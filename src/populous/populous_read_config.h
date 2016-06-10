@@ -3,7 +3,7 @@
 #include "populous_protobuf_reflect.h"
 
 
-class Illusion_Read_Config
+class Populous_Read_Config
 {
 public:
 
@@ -17,13 +17,13 @@ public:
         long read_data_start_ = 3;
 
         ///表格对应的protobuf的message名称
-        std::string   pb_msg_name_;
+        QString pb_msg_name_;
 
         ///表格的第几行描述字段对应的protobuf
         long pb_fieldname_line_ = 2;
 
         ///表格存放的数据库（SQLite）文件名称
-        std::string sqlite3_db_name_;
+		QString sqlite3_db_name_;
 
         ///表格对应的table id
         unsigned int table_id_ = 0;
@@ -34,7 +34,7 @@ public:
 
 
         ///Protobuf item定义的数据
-        std::vector<std::string>  proto_field_ary_;
+        std::vector<QString>  proto_field_ary_;
 
         ///假设结构如下，record是一个repeated 的message，
         ///phonebook.master
@@ -48,9 +48,9 @@ public:
         std::vector<int> item_msg_firstshow_;
 
         ///在上面的例子  会被记录为phonebook.record.name
-        std::string firstshow_field_;
+		QString firstshow_field_;
         ///在上面的例子 会被记录为phonebook.record
-        std::string firstshow_msg_;
+		QString firstshow_msg_;
 
     };
 
@@ -71,15 +71,15 @@ public:
     typedef std::map <QString, EXCEL_FILE_DATA> MAP_FNAME_TO_CFGDATA;
 
 protected: // 仅从序列化创建
-    Illusion_Read_Config();
+    Populous_Read_Config();
 protected:
-    virtual ~Illusion_Read_Config();
+    virtual ~Populous_Read_Config();
 
 
 public:
 
     ///
-    static Illusion_Read_Config *instance();
+    static Populous_Read_Config *instance();
 
     ///
     static void clean_instance();
@@ -97,16 +97,10 @@ public:
     /*!
     * @brief
     * @return     int
-    * @param      open_file 打开的EXCEL文件名称，名称MFC
+    * @param      open_file 打开的EXCEL文件名称，
     */
-    int read_excel_byucname(const QString &open_file);
+    int read_excel(const QString &open_file,QString &error_tips);
 
-    /*!
-    * @brief
-    * @return     int
-    * @param      proto_fname EXCEL文件名称。
-    */
-    int read_excel(const std::string &excel_fname);
 
     /*!
     * @brief
@@ -156,7 +150,7 @@ protected:
 protected:
 
     //单子实例
-    static Illusion_Read_Config  *instance_;
+    static Populous_Read_Config  *instance_;
 
 protected:
 

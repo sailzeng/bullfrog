@@ -6,14 +6,13 @@
 *@note ExcelEngine类只负责读/写数据，不负责解析，做中间层
 *@author yaoboyuan 254200341@qq.com
 *@date 2012-4-12
+*@note 对原有的代码做了一些改动，更加符合Qt的编码格式等。
+*@data 2016-6-7 端午节前夕
 */
 
 #ifndef EXCELENGINE_H
 #define EXCELENGINE_H
 
-
-
-typedef unsigned int UINT;
 
 
 
@@ -31,37 +30,93 @@ public:
 
 public:
 
-    //打开xls文件
-    bool open(UINT nSheet = 1, bool visible = false);
-    //
-    bool open(QString xlsFile, UINT nSheet = 1, bool visible = false);
+    ///初始化EXCEL
+    bool init_excel(bool visible);
 
-    ///
-    void insertSheet(const QString &sheetName);
+    ///释放退出
+    void release_excel();
+
+    //
+    bool open(const QString &xls_file, int  sheet_index = 1);
+
+    /*!
+    * @brief      插入一个sheet，同时加载这个表格，
+    * @return     void
+    * @param      sheet_name sheet的表名
+    */
+    void insert_sheet(const QString &sheet_name);
 
     //保存xls报表
     void save();
+
     //关闭xls报表
     void close();
 
+    //得到sheet的总数
+    int sheets_count();
+
+    //得到某个sheet的名字
+    bool get_sheet_name(int sheet_index, QString &sheet_name);
+
+    /*!
+    * @brief      根据索引加载sheet，
+    * @return     bool 返回是否成功加载
+    * @param      sheet_index sheet索引，从1开始
+    */
+    bool load_sheet(int sheet_index);
+    
+    /*!
+    * @brief      根据sheet表格表名加载sheet，
+    * @return     bool 返回是否成功加载
+    * @param      sheet_name 要加载的sheet 的名字
+    */
+    bool load_sheet(const QString &sheet_name);
+
+	
+	/*!
+	* @brief      检查是否有这个名字的sheet
+	* @return     bool 有返回true，否则返回false
+	* @param      sheet_name
+	*/
+	bool has_sheet(const QString &sheet_name);
+
     //保存数据到xls
-    bool saveTableData(QTableWidget *tableWidget);
+    bool write_tabledata(QTableWidget *tableWidget);
     //从xls读取数据到ui
-    bool readTableData(QTableWidget *tableWidget);
+    bool read_tabledata(QTableWidget *tableWidget);
 
-    //获取指定单元数据
-    QVariant GetCellData(UINT row, UINT column);
+	/*!
+    * @brief      获取指定单元数据
+    * @return     QVariant  单元格对应的数据
+    * @param      row  单元格的行号
+    * @param      column 单元格的列号
+    * @note       
+    */
+    QVariant get_cell(int  row, int  column);
+
     //修改指定单元数据
-    bool     SetCellData(UINT row, UINT column, QVariant data);
+    bool  set_cell(int  row, int  column,const QVariant &data);
 
-    UINT GetRowCount()const;
-    UINT GetColumnCount()const;
+	///打开的xls文件名称
+	QString open_filename() const;
+
+	///
+    int  row_count()const;
+	///
+    int  column_count()const;
 
     bool IsOpen();
     bool IsValid();
 
 protected:
     void Clear();
+
+	///加载，内部函数，以后可以考虑增加一个预加载，加快读取速度。
+	void load_sheet_internal();
+
+public:
+
+	static char *QtExcelEngine::column_name(int column_no);
 
 private:
 
@@ -84,7 +139,7 @@ private:
     QString   xls_file_;
 
     ///当前打开的第几个sheet
-    UINT      curr_sheet_ = 1;
+    int       curr_sheet_ = 1;
     ///excel是否可见
     bool      is_visible_ = false;
     //行数
