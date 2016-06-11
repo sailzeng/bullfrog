@@ -169,7 +169,7 @@ int Populous_Read_Config::init_protodir(const QString &proto_dir,
 	//加载所有的.proto 文件
 	for (int i = 0; i < proto_fileary_.size(); ++i)
 	{
-		ret = ils_proto_reflect_.import_file(proto_fileary_[i].path().toStdString());
+		ret = ils_proto_reflect_.import_file(proto_fileary_[i].fileName().toStdString());
 		if (ret != 0)
 		{
 			return -1;

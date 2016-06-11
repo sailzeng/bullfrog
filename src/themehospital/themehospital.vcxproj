@@ -38,11 +38,11 @@
     <_ProjectFileVersion>14.0.25402.0</_ProjectFileVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)../bin/$(PlatformName)-$(PlatformToolset)-$(Configuration)/</OutDir>
     <IntDir>$(SolutionDir)../obj/$(PlatformName)-$(PlatformToolset)-$(Configuration)/$(ProjectName)/</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)../bin/$(PlatformName)-$(PlatformToolset)-$(Configuration)/</OutDir>
     <IntDir>$(SolutionDir)../obj/$(PlatformName)-$(PlatformToolset)-$(Configuration)/$(ProjectName)/</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
