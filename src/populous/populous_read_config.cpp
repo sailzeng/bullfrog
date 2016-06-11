@@ -1,5 +1,4 @@
 #include "populous_predefine.h"
-#include "populous_qt_excel_engine.h"
 #include "populous_read_config.h"
 
 
@@ -35,57 +34,193 @@ void Populous_Read_Config::clean_instance()
     }
 }
 
-//
-bool Populous_Read_Config::initialize(bool need_open_excel,
-                                      const QString &config_path_str,
-                                      const QString &db3_path_str,
-                                      const QString &outlog_path_str)
+//!所有的目录都在一个目录下的快捷处理方式
+int Populous_Read_Config::init_read_all2(const QString &allinone_dir,
+										 QString &error_tips)
 {
-    config_path_.setPath(config_path_str);
-    if (config_path_.exists())
-    {
-        return false;
-    }
+	QString outer_dir = allinone_dir + "/outer";
+	return init_read_all(allinone_dir + "/excel",
+						 allinone_dir + "/proto",
+						 &outer_dir,
+						 error_tips);
+}
 
-    //db3的路径没有可以创建
-    QString temp_str = db3_path_str;
-    if (db3_path_str.isEmpty())
-    {
-        temp_str = config_path_str + "/db3";
-    }
-    sqlitedb_pah_.setPath(temp_str);
-    if (false == sqlitedb_pah_.exists())
-    {
-        sqlitedb_pah_.mkpath(temp_str);
-    }
+//读取excel_dir目录下所有的EXCEL文件，根据proto_dir目录下的meta文件，反射，转换成位置文件输出到outer_dir目录
+int Populous_Read_Config::init_read_all(const QString &excel_dir,
+									    const QString &proto_dir,
+										const QString *outer_dir,
+										QString &error_tips)
+{
+	int ret = 0;
+	excel_path_.setPath(excel_dir);
+	if (false == excel_path_.exists())
+	{
+		error_tips = QString::fromLocal8Bit("目录[%1]并不存在，请检查参数。").
+			arg(excel_dir);
+		return -1;
+	}
+	//读取.xls , .xlsx 文件
+	QStringList filters;
+	filters << "*.xls" << "*.xlsx";
+	excel_fileary_ = excel_path_.entryInfoList(filters, QDir::Files | QDir::Readable);
+	if (excel_fileary_.size() <= 0)
+	{
+		error_tips = QString::fromLocal8Bit("目录[%1]下没有任何Excel文件，请检查参数。").
+			arg(excel_dir);
+		return -1;
+	}
 
-    //log的路径没有可以创建
-    temp_str = outlog_path_str;
-    if (outlog_path_str.isEmpty())
-    {
-        temp_str = config_path_str + "/log";
-    }
-    outlog_dir_path_.setPath(temp_str);
-    if (false == outlog_dir_path_.exists())
-    {
-        outlog_dir_path_.mkpath(temp_str);
-        //建立目录后进行一次检查
-        if (false == outlog_dir_path_.exists())
-        {
-            return false;
-        }
-    }
+	ret = init_read(proto_dir,outer_dir,error_tips);
+	if (ret != 0)
+	{
+		return -1;
+	}
+    return 0;
+}
 
-    need_open_excel_ = need_open_excel;
-    if (need_open_excel_)
-    {
-        bool bret = ils_excel_file_.init_excel(false);
-        if (false == bret)
-        {
-            return false;
-        }
-    }
-    return true;
+//初始化，准备读取一个EXCEL文件，转换为配置文件
+int Populous_Read_Config::init_read_one(const QString &excel_file,
+										const QString *excel_table_name,
+										const QString &proto_dir,
+										const QString *outer_dir,
+										QString &error_tips)
+{
+	int ret = 0;
+
+	QFileInfo file_info(excel_file);
+	if (!file_info.exists())
+	{
+		error_tips = QString::fromLocal8Bit("EXCEL文件[%1]并不存在，请检查。").
+			arg(excel_file);
+		return -1;
+	}
+	excel_fileary_ << file_info;
+	excel_table_name_.clear();
+	if (excel_table_name)
+	{
+		excel_table_name_ = *excel_table_name;
+	}
+
+	ret = init_read(proto_dir, outer_dir,error_tips);
+	if (ret != 0)
+	{
+		return -1;
+	}
+
+
+
+	return 0;
+}
+
+//读取EXCEL导表进行配置
+int Populous_Read_Config::init_read(const QString &proto_dir, 
+									const QString *outer_dir,
+									QString &error_tips)
+{
+	int ret = 0;
+	//
+	ret = init_protodir(proto_dir, error_tips);
+	if (ret != 0)
+	{
+		return -1;
+	}
+
+	ret = init_outdir(outer_dir, error_tips);
+	if (ret != 0)
+	{
+		return -1;
+	}
+
+	bool bret = ils_excel_file_.initialize(false);
+	if (false == bret)
+	{
+		error_tips = QString::fromLocal8Bit("OLE不能启动EXCEL，实用OLE读取EXCEL必须安装了EXCEL。");
+		return -1;
+	}
+
+
+	return 0;
+}
+
+//初始化.proto文件目录，读取里面所有的proto文件
+int Populous_Read_Config::init_protodir(const QString &proto_dir,
+										QString &error_tips)
+{
+	int ret = 0;
+	proto_path_.setPath(proto_dir);;
+	if (false == proto_path_.exists())
+	{
+		error_tips = QString::fromLocal8Bit("目录[%1]并不存在，请检查参数。").
+			arg(proto_dir);
+		return -1;
+	}
+	//读取.proto 文件
+	QStringList filters;
+	filters << "*.proto";
+	proto_fileary_ = proto_path_.entryInfoList(filters, QDir::Files | QDir::Readable);
+	if (proto_fileary_.size() <= 0)
+	{
+		error_tips = QString::fromLocal8Bit("目录[%1]下没有任何protobuf meta(.proto)文件，请检查参数。").
+			arg(proto_dir);
+		return -1;
+	}
+	ils_proto_reflect_.map_path(proto_path_.path().toStdString());
+
+	//加载所有的.proto 文件
+	for (int i = 0; i < proto_fileary_.size(); ++i)
+	{
+		ret = ils_proto_reflect_.import_file(proto_fileary_[i].path().toStdString());
+		if (ret != 0)
+		{
+			return -1;
+		}
+	}
+	return 0;
+}
+
+int Populous_Read_Config::init_outdir(const QString *outer_dir,
+									  QString &error_tips)
+{
+	QString path_str;
+	if (outer_dir)
+	{
+		path_str = *outer_dir;
+	}
+	else
+	{
+		path_str = ".";
+	}
+
+	path_str += "/log";
+	out_log_path_.setPath(path_str);
+	if (false == out_log_path_.exists())
+	{
+		if (false == out_log_path_.mkpath(path_str))
+		{
+			return -1;
+		}
+	}
+	//db3的路径没有可以创建
+	path_str += "/db3";
+	out_db3_path_.setPath(path_str);
+	if (false == out_db3_path_.exists())
+	{
+		if (false == out_db3_path_.mkpath(path_str))
+		{
+			return -1;
+		}
+	}
+	//pbc的路径没有可以创建
+	path_str += "/pbc";
+	out_pbc_path_.setPath(path_str);
+	if (false == out_pbc_path_.exists())
+	{
+		if (false == out_pbc_path_.mkpath(path_str))
+		{
+			return -1;
+		}
+	}
+	return 0;
 }
 
 //
@@ -93,10 +228,10 @@ void Populous_Read_Config::finalize()
 {
     clear();
 
-    if (need_open_excel_)
+    if (ils_excel_file_.is_open())
     {
         ils_excel_file_.close();
-        ils_excel_file_.release_excel();
+        ils_excel_file_.finalize();
     }
 
     return;
@@ -108,8 +243,39 @@ void Populous_Read_Config::clear()
     file_cfg_map_.clear();
 }
 
+//把扫描或者参数的EXCEL文件都进行一次读取
+int Populous_Read_Config::read_excel(QString &error_tips)
+{
+	//
+	int ret = 0;
+	if (!excel_table_name_.isEmpty() && excel_fileary_.size()== 1)
+	{
+		return read_one_excel(excel_fileary_[0].filePath(),
+							  &excel_table_name_,
+							  error_tips);
+	}
+	else
+	{
+		//代码写错了？
+		Q_ASSERT(excel_table_name_.isEmpty());
+		for (int i = 0; i < excel_fileary_.size(); ++i)
+		{
+			ret = read_one_excel(excel_fileary_[i].filePath(),
+								 NULL,
+								 error_tips);
+			if (0 != ret)
+			{
+				return ret;
+			}
+		}
+	}
+	return 0;
+}
 
-int Populous_Read_Config::read_excel(const QString &open_file, QString &error_tips)
+//读取一个EXCEL文件，如果制定了表格，只读取特定表格
+int Populous_Read_Config::read_one_excel(const QString &open_file,
+									     const QString *excel_table_name,
+									     QString &error_tips)
 {
     clear();
 
@@ -121,15 +287,17 @@ int Populous_Read_Config::read_excel(const QString &open_file, QString &error_ti
     }
     //
     qDebug() << "Dream excecl file have sheet num["
-        << ils_excel_file_.sheets_count()
-        <<"].\n";
+             << ils_excel_file_.sheets_count()
+             << "].\n";
 
     //表格错误
     if (ils_excel_file_.has_sheet("TABLE_CONFIG") == false ||
         ils_excel_file_.has_sheet("ENUM_CONFIG") == false)
     {
         //
-		error_tips = QString::fromLocal8Bit("你选择的配置EXCEL不是能读取的配置表，请重现检查后打开。!");
+        error_tips = QString::fromLocal8Bit("你选择的配置EXCEL不是能读取的配置表[TABLE_CONFIG]"
+											" or [ENUM_CONFIG]"
+											"，请重现检查后打开。!");
         return -1;
     }
 
@@ -146,7 +314,7 @@ int Populous_Read_Config::read_excel(const QString &open_file, QString &error_ti
     int ret = read_table_enum(xls_data);
     if (0 != ret)
     {
-		error_tips = QString::fromLocal8Bit("你选择的配置EXCEL文件中的ENUM_CONFIG表不正确，请重现检查后打开。!");
+        error_tips = QString::fromLocal8Bit("你选择的配置EXCEL文件中的[ENUM_CONFIG]表不正确，请重现检查后打开。!");
         return ret;
     }
 
@@ -154,17 +322,30 @@ int Populous_Read_Config::read_excel(const QString &open_file, QString &error_ti
     ret = read_table_config(xls_data);
     if (0 != ret)
     {
-		error_tips = QString::fromLocal8Bit("你选择的配置EXCEL文件中的TABLE_CONFIG表不正确，请重现检查后打开。!");
+        error_tips = QString::fromLocal8Bit("你选择的配置EXCEL文件中的TABLE_CONFIG表不正确，请重现检查后打开。!");
         return ret;
     }
 
-    ///
+	if (excel_table_name && ils_excel_file_.has_sheet(*excel_table_name) == false)
+	{
+		error_tips = QString::fromLocal8Bit("没有一张表格被读取了!您设置的读取表格[%1]应该不存在").
+			arg(*excel_table_name);
+		return -1;
+	}
+
+    //!
     ARRARY_OF_AI_IIJIMA_BINARY  fandaoai_ary;
 
+	bool already_read = false;
     auto iter_tmp = xls_data.xls_table_cfg_.begin();
     for (; iter_tmp != xls_data.xls_table_cfg_.end(); ++iter_tmp)
     {
-
+		//如果标识了table name，只读取这个table
+		if (excel_table_name && *excel_table_name != iter_tmp->second.excel_table_name_)
+		{
+			continue;
+		}
+		already_read = true;
         ret = read_table_cfgdata(iter_tmp->second, &fandaoai_ary);
         if (0 != ret)
         {
@@ -177,25 +358,12 @@ int Populous_Read_Config::read_excel(const QString &open_file, QString &error_ti
             return ret;
         }
     }
-
-    return 0;
-}
-
-//
-void Populous_Read_Config::map_proto_path(const std::string &path_name)
-{
-    ils_proto_reflect_.map_path(path_name);
-}
-
-///
-int Populous_Read_Config::read_proto(const std::string &proto_fname)
-{
-
-    int ret = ils_proto_reflect_.import_file(proto_fname);
-    if (ret != 0)
-    {
-        return -1;
-    }
+	//如果没有读取,理论上前面检查了表格是否存在
+	if (!already_read)
+	{
+		error_tips = QString::fromLocal8Bit("没有一张表格被读取了!原因不明，我的确不明。");
+		return -1;
+	}
     return 0;
 }
 
@@ -212,12 +380,12 @@ int Populous_Read_Config::read_table_enum(EXCEL_FILE_DATA &file_cfg_data)
 
     //答应行列
     int row_count = ils_excel_file_.row_count();
-	int col_count = ils_excel_file_.column_count();
-    qDebug()<<"ENUM_CONFIG table have col_count = "
-		<< col_count
-		<<" row_count ="
-		<< row_count
-		<<"\n";
+    int col_count = ils_excel_file_.column_count();
+    qDebug() << "ENUM_CONFIG table have col_count = "
+             << col_count
+             << " row_count ="
+             << row_count
+             << "\n";
 
     //注意行列的下标都是从1开始。
     const long COL_ENUM_KEY = 1;
@@ -236,13 +404,12 @@ int Populous_Read_Config::read_table_enum(EXCEL_FILE_DATA &file_cfg_data)
         //如果第一个字符是[
         if (enum_key[0] == ENUM_FIRST_CHAR )
         {
-			QString enum_vlaue = ils_excel_file_.get_cell(row_no, COL_ENUM_VALUE).toString();
+            QString enum_vlaue = ils_excel_file_.get_cell(row_no, COL_ENUM_VALUE).toString();
             file_cfg_data.xls_enum_[enum_key] = enum_vlaue;
 
             ++read_enum;
         }
     }
-
     return 0;
 }
 
@@ -259,7 +426,7 @@ int Populous_Read_Config::read_table_config(EXCEL_FILE_DATA &file_cfg_data)
 
     long row_count = ils_excel_file_.row_count();
     long col_count = ils_excel_file_.column_count();
-	qDebug() << "TABLE_CONFIG table have col_count = "<<col_count<<" row_count ="<< row_count<<"\n";
+    qDebug() << "TABLE_CONFIG table have col_count = " << col_count << " row_count =" << row_count << "\n";
 
     //注意行列的下标都是从1开始。
     const long COL_TC_KEY = 1;
@@ -270,7 +437,7 @@ int Populous_Read_Config::read_table_config(EXCEL_FILE_DATA &file_cfg_data)
 
         QString tc_key = ils_excel_file_.get_cell(row_no, COL_TC_KEY).toString();
 
-		QString temp_value;
+        QString temp_value;
         TABLE_CONFIG tc_data;
 
         if (tc_key == QString::fromLocal8Bit("表格名称"))
@@ -310,12 +477,12 @@ int Populous_Read_Config::read_table_config(EXCEL_FILE_DATA &file_cfg_data)
                 return -1;
             }
 
-			tc_data.pb_msg_name_ = ils_excel_file_.get_cell(row_no, COL_TC_VALUE).toString();
+            tc_data.pb_msg_name_ = ils_excel_file_.get_cell(row_no, COL_TC_VALUE).toString();
             if (tc_data.pb_msg_name_.isEmpty())
             {
                 return -1;
             }
-            
+
             ++row_no;
             if (row_no > row_count)
             {
@@ -332,7 +499,7 @@ int Populous_Read_Config::read_table_config(EXCEL_FILE_DATA &file_cfg_data)
             {
                 return -1;
             }
-			tc_data.sqlite3_db_name_ = ils_excel_file_.get_cell(row_no, COL_TC_VALUE).toString();
+            tc_data.sqlite3_db_name_ = ils_excel_file_.get_cell(row_no, COL_TC_VALUE).toString();
             if (tc_data.sqlite3_db_name_.isEmpty())
             {
                 return -1;
@@ -395,13 +562,13 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
     std::shared_ptr <google::protobuf::Message> new_msg(tmp_msg);
 
     int line_count = ils_excel_file_.row_count();
-	int col_count = ils_excel_file_.column_count();
-    qDebug()<< tc_data.excel_table_name_<<
-		" table have col_count = "
-		<< col_count
-		<<" row_count ="
-		<< line_count
-		<< "\n";
+    int col_count = ils_excel_file_.column_count();
+    qDebug() << tc_data.excel_table_name_ <<
+             " table have col_count = "
+             << col_count
+             << " row_count ="
+             << line_count
+             << "\n";
 
     QString field_name_string;
     if (tc_data.pb_fieldname_line_ > line_count || tc_data.read_data_start_ > line_count )
@@ -418,7 +585,7 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
         int find_pos = tc_data.proto_field_ary_[col_no - 1].lastIndexOf('.');
         if (find_pos != -1)
         {
-            if (tc_data.firstshow_field_ ==	field_name_string)
+            if (tc_data.firstshow_field_ == field_name_string)
             {
                 tc_data.item_msg_firstshow_.push_back(true);
             }
@@ -432,7 +599,7 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
                 else
                 {
                     tc_data.firstshow_field_ = field_name_string;
-                    tc_data.firstshow_msg_.append(field_name_string.unicode(),find_pos + 1);
+                    tc_data.firstshow_msg_.append(field_name_string.unicode(), find_pos + 1);
                     tc_data.item_msg_firstshow_.push_back(true);
                 }
             }
@@ -482,21 +649,21 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
 
     //吧啦吧啦吧啦吧啦吧啦吧啦吧啦，这段啰嗦的代码只是为了搞个日志的名字,EXCEFILENAE_TABLENAME.log
     QString xls_file_name;
-	xls_file_name = ils_excel_file_.open_filename();
-	QFileInfo xls_fileinfo(xls_file_name);
-	QString file_basename = xls_fileinfo.baseName();
-    
+    xls_file_name = ils_excel_file_.open_filename();
+    QFileInfo xls_fileinfo(xls_file_name);
+    QString file_basename = xls_fileinfo.baseName();
+
     QString log_file_name = file_basename;
     log_file_name += "_";
     log_file_name += tc_data.excel_table_name_;
     log_file_name += ".log";
-    QString outlog_filename = outlog_dir_path_.path();
-	outlog_filename += "/";
-	outlog_filename += log_file_name;
+    QString outlog_filename = out_log_path_.path();
+    outlog_filename += "/";
+    outlog_filename += log_file_name;
 
     QFile read_table_log(outlog_filename);
     read_table_log.open(QIODevice::ReadWrite);
-	if (!read_table_log.isWritable())
+    if (!read_table_log.isWritable())
     {
         ZCE_LOG(RS_ERROR, "Read excel file data log file [%s] open fail.", outlog_filename.unicode());
         return -1;
@@ -509,13 +676,13 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
     sstr_stream << "Read table:" << tc_data.excel_table_name_.unicode() << std::endl;
 
     ZCE_LOG(RS_INFO, "Read excel file:%s table :%s start. line count %u column %u.",
-		xls_file_name.unicode(),
-		tc_data.excel_table_name_.unicode(),
-        line_count,
-        col_count);
+            xls_file_name.unicode(),
+            tc_data.excel_table_name_.unicode(),
+            line_count,
+            col_count);
 
     int index_1 = 0, index_2 = 0;
-	QString read_data;
+    QString read_data;
     std::string set_data;
 
     //读取每一行的数据 ,+1是因为read_data_start_也要读取
@@ -545,17 +712,17 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
             //如果是string 类型，Google PB之支持UTF8
             if (field_desc->type() == google::protobuf::FieldDescriptor::Type::TYPE_STRING )
             {
-				set_data = read_data.toStdString();
+                set_data = read_data.toStdString();
             }
             //对于BYTES，
             else if (field_desc->type() == google::protobuf::FieldDescriptor::Type::TYPE_BYTES)
             {
-				set_data = read_data.toLatin1();
+                set_data = read_data.toLatin1();
             }
             //其他字段类型统一转换为UTF8的编码
             else
             {
-				set_data = read_data.toStdString();
+                set_data = read_data.toStdString();
             }
             //根据描述，设置字段的数据
             ret = Illusion_Protobuf_Reflect::set_fielddata(field_msg, field_desc, set_data);
@@ -617,10 +784,10 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
     out_string = sstr_stream.str();
 
     ZCE_LOG(RS_INFO, "\n%s", out_string.c_str());
-	read_table_log.write(out_string.c_str(), out_string.length());
+    read_table_log.write(out_string.c_str(), out_string.length());
 
     ZCE_LOG(RS_INFO, "Read excel file:%s table :%s end.", xls_file_name.unicode(),
-		tc_data.excel_table_name_.unicode());
+            tc_data.excel_table_name_.unicode());
 
     return 0;
 }
@@ -630,7 +797,7 @@ int Populous_Read_Config::save_to_sqlitedb(const TABLE_CONFIG &table_cfg,
                                            const ARRARY_OF_AI_IIJIMA_BINARY *aiiijma_ary)
 {
     int ret = 0;
-    QString db3_file = sqlitedb_pah_.path();
+    QString db3_file = out_db3_path_.path();
     db3_file += table_cfg.sqlite3_db_name_;
 
     ZCE_General_Config_Table sqlite_config;
@@ -659,7 +826,7 @@ int Populous_Read_Config::save_to_sqlitedb(const TABLE_CONFIG &table_cfg,
 
 
 
-///从DB3文件里面读取某个配置表的配置
+//!从DB3文件里面读取某个配置表的配置
 int Populous_Read_Config::read_db3_conftable(const std::string &db3_fname,
                                              const std::string &conf_message_name,
                                              unsigned int table_id,
@@ -675,11 +842,11 @@ int Populous_Read_Config::read_db3_conftable(const std::string &db3_fname,
             index_2);
 
     int ret = 0;
-    QString db3_file = sqlitedb_pah_.path();
-	db3_file += "/";
+    QString db3_file = out_db3_path_.path();
+    db3_file += "/";
     db3_file += db3_fname.c_str();
 
-    ///
+    //!
     ZCE_General_Config_Table sqlite_config;
     ret = sqlite_config.open_dbfile(db3_file.toStdString().c_str(), true, false);
     if (ret != 0)
@@ -694,8 +861,8 @@ int Populous_Read_Config::read_db3_conftable(const std::string &db3_fname,
     snprintf(table_id_buf, 31 , "%u", table_id);
     log_file_name += table_id_buf;
     log_file_name += ".log";
-    std::string out_log_file = outlog_dir_path_.path().toStdString();
-	out_log_file += "/";
+    std::string out_log_file = out_log_path_.path().toStdString();
+    out_log_file += "/";
     out_log_file += log_file_name.c_str();
 
     std::ofstream read_db3_log;

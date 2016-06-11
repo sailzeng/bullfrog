@@ -31,12 +31,12 @@ QtExcelEngine::~QtExcelEngine()
         //析构前，先保存数据，然后关闭workbook
         close();
     }
-    release_excel();
+    finalize();
 }
 
 
-//初始化EXCEL文件，
-bool QtExcelEngine::init_excel(bool visible)
+//初始化EXCEL OLE对象，打开EXCEL 进程，
+bool QtExcelEngine::initialize(bool visible)
 {
 
     HRESULT r = ::OleInitialize(0);
@@ -67,7 +67,7 @@ bool QtExcelEngine::init_excel(bool visible)
 
 
 //
-void QtExcelEngine::release_excel()
+void QtExcelEngine::finalize()
 {
     if (excel_instance_ )
     {
@@ -87,9 +87,7 @@ void QtExcelEngine::release_excel()
 }
 
 
-/**
-  *@brief Open()的重载函数
-  */
+//打开EXCEL文件
 bool QtExcelEngine::open(const QString &xls_file, int  sheet_index)
 {
     xls_file_ = xls_file;
@@ -281,7 +279,7 @@ void QtExcelEngine::load_sheet_internal()
 }
 
 
-///打开的xls文件名称
+//!打开的xls文件名称
 QString QtExcelEngine::open_filename() const
 {
 	return xls_file_;
@@ -437,7 +435,7 @@ bool QtExcelEngine::set_cell(int row, int column,const QVariant &data)
 /**
   *@brief 清空除报表之外的数据
   */
-void QtExcelEngine::Clear()
+void QtExcelEngine::clear()
 {
     xls_file_     = "";
     row_count_    = 0;
@@ -451,7 +449,7 @@ void QtExcelEngine::Clear()
   *@return true : 已打开
   *        false: 未打开
   */
-bool QtExcelEngine::IsOpen()
+bool QtExcelEngine::is_open()
 {
     return is_open_;
 }
@@ -461,7 +459,7 @@ bool QtExcelEngine::IsOpen()
   *@return true : 可用
   *        false: 不可用
   */
-bool QtExcelEngine::IsValid()
+bool QtExcelEngine::is_valid()
 {
     return is_valid_;
 }

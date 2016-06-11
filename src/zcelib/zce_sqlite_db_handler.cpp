@@ -146,7 +146,7 @@ int ZCE_SQLite_DB_Handler::turn_off_synch()
     return execute("PRAGMA synchronous=OFF;");
 }
 
-///执行DDL等不需要结果的SQL
+//!执行DDL等不需要结果的SQL
 int ZCE_SQLite_DB_Handler::execute(const char *sql_string)
 {
     int ret = 0;

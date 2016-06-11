@@ -162,42 +162,42 @@ int Illusion_Protobuf_Reflect::set_fielddata(google::protobuf::Message *msg,
         // double, exactly eight bytes on the wire.
         if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_DOUBLE)
         {
-            reflection->SetDouble(msg, field, ZCE_LIB::string_to_value<double>(set_data));
+            reflection->SetDouble(msg, field, std::stod(set_data));
         }
         // float, exactly four bytes on the wire.
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_FLOAT)
         {
-            reflection->SetFloat(msg, field, ZCE_LIB::string_to_value<float>(set_data));
+            reflection->SetFloat(msg, field, std::stof(set_data));
         }
         // int64, varint on the wire.  Negative numbers take 10 bytes.  Use TYPE_SINT32 if negative values are likely.
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_INT64)
         {
-            reflection->SetInt64(msg, field, ZCE_LIB::string_to_value<int64_t>(set_data));
+            reflection->SetInt64(msg, field, std::stoll(set_data));
         }
         // uint64, exactly eight bytes on the wire.
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_UINT64)
         {
-            reflection->SetUInt64(msg, field, ZCE_LIB::string_to_value<uint64_t>(set_data));
+            reflection->SetUInt64(msg, field, std::stoull(set_data));
         }
         //int32, varint on the wire.Negative numbers take 10 bytes.  Use TYPE_SINT32 if negative values are likely.
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_INT32)
         {
-            reflection->SetInt32(msg, field, ZCE_LIB::string_to_value<int32_t>(set_data));
+            reflection->SetInt32(msg, field, std::stoi(set_data));
         }
         //
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_FIXED64)
         {
-            reflection->SetUInt64(msg, field, ZCE_LIB::string_to_value<uint64_t>(set_data));
+            reflection->SetUInt64(msg, field, std::stoull(set_data));
         }
         // uint32, exactly four bytes on the wire.
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_FIXED32)
         {
-            reflection->SetUInt32(msg, field, ZCE_LIB::string_to_value<uint32_t>(set_data));
+            reflection->SetUInt32(msg, field, std::stoul(set_data));
         }
         // bool, varint on the wire.
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_BOOL)
         {
-            reflection->SetBool(msg, field, ZCE_LIB::string_to_value<bool>(set_data));
+            reflection->SetBool(msg, field, string_to_bool(set_data));
         }
         // UTF-8 text.
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_STRING)
@@ -236,22 +236,22 @@ int Illusion_Protobuf_Reflect::set_fielddata(google::protobuf::Message *msg,
         // int32, exactly four bytes on the wire
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_SFIXED32)
         {
-            reflection->SetInt32(msg, field, ZCE_LIB::string_to_value<int32_t>(set_data));
+            reflection->SetInt32(msg, field, std::stoi(set_data));
         }
         // int64, exactly eight bytes on the wire
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_SFIXED64)
         {
-            reflection->SetInt64(msg, field, ZCE_LIB::string_to_value<int64_t>(set_data));
+            reflection->SetInt64(msg, field, std::stoll(set_data));
         }
         // int32, ZigZag-encoded varint on the wire
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_SINT32)
         {
-            reflection->SetInt32(msg, field, ZCE_LIB::string_to_value<int32_t>(set_data));
+            reflection->SetInt32(msg, field, std::stoi(set_data));
         }
         // int64, ZigZag-encoded varint on the wire
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_SINT64)
         {
-            reflection->SetInt64(msg, field, ZCE_LIB::string_to_value<int64_t>(set_data));
+            reflection->SetInt64(msg, field, std::stoll(set_data));
         }
         else
         {
@@ -270,42 +270,42 @@ int Illusion_Protobuf_Reflect::set_fielddata(google::protobuf::Message *msg,
         // double, exactly eight bytes on the wire.
         if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_DOUBLE)
         {
-            reflection->AddDouble(msg, field, ZCE_LIB::string_to_value<double>(set_data));
+            reflection->AddDouble(msg, field, std::stod(set_data));
         }
         // float, exactly four bytes on the wire.
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_FLOAT)
         {
-            reflection->AddFloat(msg, field, ZCE_LIB::string_to_value<float>(set_data));
+            reflection->AddFloat(msg, field, std::stof(set_data));
         }
         // int64, varint on the wire.  Negative numbers take 10 bytes.  Use TYPE_SINT32 if negative values are likely.
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_INT64)
         {
-            reflection->AddInt64(msg, field, ZCE_LIB::string_to_value<int64_t>(set_data));
+            reflection->AddInt64(msg, field, std::stoll(set_data));
         }
         // uint64, exactly eight bytes on the wire.
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_UINT64)
         {
-            reflection->AddUInt64(msg, field, ZCE_LIB::string_to_value<uint64_t>(set_data));
+            reflection->AddUInt64(msg, field, std::stoull(set_data));
         }
         //int32, varint on the wire.Negative numbers take 10 bytes.  Use TYPE_SINT32 if negative values are likely.
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_INT32)
         {
-            reflection->AddInt32(msg, field, ZCE_LIB::string_to_value<int32_t>(set_data));
+            reflection->AddInt32(msg, field, std::stoi(set_data));
         }
         //
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_FIXED64)
         {
-            reflection->AddUInt64(msg, field, ZCE_LIB::string_to_value<uint64_t>(set_data));
+            reflection->AddUInt64(msg, field, std::stoull(set_data));
         }
         // uint32, exactly four bytes on the wire.
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_FIXED32)
         {
-            reflection->AddUInt32(msg, field, ZCE_LIB::string_to_value<uint32_t>(set_data));
+            reflection->AddUInt32(msg, field, std::stoul(set_data));
         }
         // bool, varint on the wire.
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_BOOL)
         {
-            reflection->AddBool(msg, field, ZCE_LIB::string_to_value<bool>(set_data));
+            reflection->AddBool(msg, field, string_to_bool(set_data));
         }
         // UTF-8 text.
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_STRING)
@@ -344,22 +344,22 @@ int Illusion_Protobuf_Reflect::set_fielddata(google::protobuf::Message *msg,
         // int32, exactly four bytes on the wire
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_SFIXED32)
         {
-            reflection->AddInt32(msg, field, ZCE_LIB::string_to_value<int32_t>(set_data));
+            reflection->AddInt32(msg, field, std::stoi(set_data));
         }
         // int64, exactly eight bytes on the wire
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_SFIXED64)
         {
-            reflection->AddInt64(msg, field, ZCE_LIB::string_to_value<int64_t>(set_data));
+            reflection->AddInt64(msg, field, std::stoll(set_data));
         }
         // int32, ZigZag-encoded varint on the wire
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_SINT32)
         {
-            reflection->AddInt32(msg, field, ZCE_LIB::string_to_value<int32_t>(set_data));
+            reflection->AddInt32(msg, field, std::stoi(set_data));
         }
         // int64, ZigZag-encoded varint on the wire
         else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_SINT64)
         {
-            reflection->AddInt64(msg, field, ZCE_LIB::string_to_value<int64_t>(set_data));
+            reflection->AddInt64(msg, field, std::stoll(set_data));
         }
         else
         {
@@ -470,7 +470,7 @@ int Illusion_Protobuf_Reflect::get_fielddesc(google::protobuf::Message *msg,
     field_msg = msg;
     const char *FIELD_SEPARATOR = ".";
     std::vector<std::string> v;
-    ZCE_LIB::string_split(full_name, FIELD_SEPARATOR, v);
+    string_split(full_name, FIELD_SEPARATOR, v);
 
     size_t level_num = v.size();
     if (level_num > 1)
@@ -1023,4 +1023,71 @@ void Illusion_Protobuf_Reflect::message_set_default(google::protobuf::Message *m
         }
     }
     return;
+}
+
+
+bool Illusion_Protobuf_Reflect::string_to_bool(const std::string& str)
+{
+
+	if (0 == strcasecmp("TRUE", str.c_str()))
+	{
+		return true;
+	}
+	else if (1 == ::atoi(str.c_str()))
+	{
+		return true;
+	}
+	return false;
+}
+
+void Illusion_Protobuf_Reflect::string_split(const std::string &source_str,
+						 const std::string &separator,
+						 std::vector<std::string> &v)
+{
+
+	std::string::const_iterator fs = source_str.begin();
+	std::string::const_iterator ls = source_str.end();
+	std::string::const_iterator fo = separator.begin();
+	std::string::const_iterator lo = separator.end();
+
+	//使用尾部插入的迭代器
+	std::back_insert_iterator<std::vector<std::string> > o = std::back_inserter(v);
+	if (fo == lo)
+	{
+		*o = std::vector<std::string>::value_type(fs, ls);
+		return;
+	}
+
+	// current position old_str in str
+	std::string::const_iterator  pos = std::search(fs, ls, fo, lo,
+								 std::equal_to<std::string::value_type>());
+
+	if (pos == ls)
+	{
+		if (fs < ls)
+		{
+			*o = std::vector<std::string>::value_type(fs, ls);
+		}
+
+		return;
+	}
+
+	size_t old_size = std::distance(fo, lo);
+
+	for (; pos != ls;)
+	{
+		// append src string
+		*o = std::vector<std::string>::value_type(fs, pos);
+		// ignore old_str
+		fs = pos + old_size;
+		// find next
+		pos = std::search(fs, ls, fo, lo, std::equal_to<std::string::value_type>());
+	}
+
+	if (fs != ls)
+	{
+		*o = std::vector<std::string>::value_type(fs, ls);
+	}
+
+	return;
 }

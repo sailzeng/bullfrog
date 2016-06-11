@@ -85,10 +85,10 @@ public:
 
 public:
 
-    ///映射一个路径
+    //!映射一个路径
     void map_path(const std::string &path);
 
-    ///导入一个proto 文件
+    //!导入一个proto 文件
     int import_file(const std::string &file_name);
 
     //返回错误信息
@@ -108,46 +108,55 @@ public:
     //
 public:
 
-    ///根据fullname，也就是 phone_book.number 设置一个Message的field
+    //!根据fullname，也就是 phone_book.number 设置一个Message的field
     static int set_field(google::protobuf::Message *msg,
                          const std::string &full_name,
                          const std::string &set_data,
                          bool message_add);
 
-    ///根据fullname,得到某个字段的描述信息
+    //!根据fullname,得到某个字段的描述信息
     static int get_fielddesc(google::protobuf::Message *msg,
                              const std::string &full_name,
                              bool message_add,
                              google::protobuf::Message *&field_msg,
                              const google::protobuf::FieldDescriptor *&field_desc);
 
-    ///设置一个Message的field
+    //!设置一个Message的field
     static int set_fielddata(google::protobuf::Message *msg,
                              const google::protobuf::FieldDescriptor *field,
                              const std::string &set_data);
 
 
-    ///定位一个子结构
+    //!定位一个子结构
     static int locate_sub_msg(google::protobuf::Message *msg,
                               const std::string &submsg_field_name,
                               bool message_add,
                               google::protobuf::Message *&sub_msg);
 
-    ///打印输出一个Message的信息到ostream里面，
+    //!打印输出一个Message的信息到ostream里面，
     static void protobuf_output(const google::protobuf::Message *msg,
                                 std::ostream *out);
 
-    ///将message里面所有的字段设置为默认值，
-    ///注意这儿不直接用Clear函数的原因是，我在读取配置的过程已经把Message结构构造好了
-    ///对应的Field的指针也保存了，如果Clear这一切都失效了（对repeated里面新增的Mesage）。
+    //!将message里面所有的字段设置为默认值，
+    //!注意这儿不直接用Clear函数的原因是，我在读取配置的过程已经把Message结构构造好了
+    //!对应的Field的指针也保存了，如果Clear这一切都失效了（对repeated里面新增的Mesage）。
     static void message_set_default(google::protobuf::Message *msg);
+
+
+	//!
+	static bool string_to_bool(const std::string& str);
+	
+	static void string_split(const std::string &source_str,
+							 const std::string &separator,
+							 std::vector<std::string> &v);
+
 
 protected:
 
-    ///
+    //!
     google::protobuf::compiler::Importer *protobuf_importer_;
 
-    ///
+    //!
     google::protobuf::compiler::DiskSourceTree *source_tree_;
 
     //
