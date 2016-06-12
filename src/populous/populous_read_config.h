@@ -17,20 +17,26 @@ public:
         long read_data_start_ = 3;
 
         //!表格对应的protobuf的message名称
-        QString pb_msg_name_;
+        QString pb_line_message_;
 
         //!表格的第几行描述字段对应的protobuf
-        long pb_fieldname_line_ = 2;
+        int pb_fieldname_line_ = 2;
+		
+		//存放protobuf配置数据的的文件名称
+		QString save_pb_config_;
+		//!对应的repeat line message 结构的名称，
+		QString pb_list_message_;
+
 
         //!表格存放的数据库（SQLite）文件名称
-        QString sqlite3_db_name_;
+        QString save_sqlite3_db_;
 
         //!表格对应的table id
         unsigned int table_id_ = 0;
         //!表格索引的字段1的列号
-        long index1_column_ = 0;
+        int index1_column_ = 0;
         //!表格索引的字段2的列号
-        long index2_column_ = 0;
+		int index2_column_ = 0;
 
 
         //!Protobuf item定义的数据
@@ -156,17 +162,46 @@ protected:
     //读枚举值
     int read_table_enum(EXCEL_FILE_DATA &file_cfg_data);
 
-    //!读取表格配置
-    int read_table_config(EXCEL_FILE_DATA &file_cfg_data);
+    //!
+	/*!
+	* @brief      读取sheet [TABLE_CONFIG] 的配置
+	* @return     int 返回成功与否 == 0标识成功
+	* @param      file_cfg_data
+	* @param      error_tips
+	* @note       
+	*/
+	int read_table_config(EXCEL_FILE_DATA &file_cfg_data,
+						  QString &error_tips);
 
-    //!读取表格数据
-    int read_table_cfgdata(TABLE_CONFIG &table_cfg,
-                           ARRARY_OF_AI_IIJIMA_BINARY *aiiijma_ary);
+    /*!
+    * @brief      读取表格数据
+    * @return     int
+    * @param      table_cfg   sheet的配置
+	* @param      list_msg    List Message，用于存储Proto的配置文件
+    * @param      aiiijma_ary
+    * @param      error_tips
+    * @note       
+    */
+    int read_sheet_cfgdata(TABLE_CONFIG &table_cfg,
+                           ARRARY_OF_AI_IIJIMA_BINARY *aiiijma_ary,
+						   QString &error_tips);
 
-    //!将数据保存到SQLite3 DB文件里面
+    
+    /*!
+    * @brief      将数据保存到SQLite3 DB文件里面
+    * @return     int
+    * @param      table_cfg
+    * @param      aiiijma_ary
+    * @param      error_tips
+    */
     int save_to_sqlitedb(const TABLE_CONFIG &table_cfg,
-                         const ARRARY_OF_AI_IIJIMA_BINARY *aiiijma_ary);
+                         const ARRARY_OF_AI_IIJIMA_BINARY *aiiijma_ary,
+						 QString &error_tips);
 
+
+	int save_to_protocfg(const TABLE_CONFIG &table_cfg,
+						 const ARRARY_OF_AI_IIJIMA_BINARY *aiiijma_ary,
+						 QString &error_tips);
 
 	/*!
 	* @brief      读取EXCEL初始化的内部实现，对接几个读取初始化接口

@@ -321,7 +321,7 @@ int Populous_Read_Config::read_one_excel(const QString &open_file,
     }
 
     //
-    ret = read_table_config(xls_data);
+    ret = read_table_config(xls_data, error_tips);
     if (0 != ret)
     {
         error_tips = QString::fromLocal8Bit("你选择的配置EXCEL文件中的TABLE_CONFIG表不正确，请重现检查后打开。!");
@@ -348,13 +348,13 @@ int Populous_Read_Config::read_one_excel(const QString &open_file,
 			continue;
 		}
 		already_read = true;
-        ret = read_table_cfgdata(iter_tmp->second, &fandaoai_ary);
+        ret = read_sheet_cfgdata(iter_tmp->second, &fandaoai_ary, error_tips);
         if (0 != ret)
         {
             return ret;
         }
 
-        ret = save_to_sqlitedb(iter_tmp->second, &fandaoai_ary);
+        ret = save_to_sqlitedb(iter_tmp->second, &fandaoai_ary, error_tips);
         if (0 != ret)
         {
             return ret;
@@ -417,12 +417,15 @@ int Populous_Read_Config::read_table_enum(EXCEL_FILE_DATA &file_cfg_data)
 
 
 //读取表格配置
-int Populous_Read_Config::read_table_config(EXCEL_FILE_DATA &file_cfg_data)
+int Populous_Read_Config::read_table_config(EXCEL_FILE_DATA &file_cfg_data,
+											QString &error_tips)
 {
     //前面检查过了
     bool bret = ils_excel_file_.load_sheet("TABLE_CONFIG");
     if (bret == false)
     {
+		error_tips = QString::fromLocal8Bit("你选择的配置EXCEL不是能读取的配置表[TABLE_CONFIG]"
+											"，请重现检查后打开。!");
         return -1;
     }
 
@@ -431,106 +434,148 @@ int Populous_Read_Config::read_table_config(EXCEL_FILE_DATA &file_cfg_data)
     qDebug() << "TABLE_CONFIG table have col_count = " << col_count << " row_count =" << row_count << "\n";
 
     //注意行列的下标都是从1开始。
-    const long COL_TC_KEY = 1;
-    const long COL_TC_VALUE = 2;
+    const int COL_TC_KEY = 1;
+    const int COL_TC_VALUE = 3;
+	bool info_imperfect = false;
+	QString cur_process_sheet;
 
-    for (long row_no = 1; row_no <= row_count; ++row_no)
+    for (int row_no = 1; row_no <= row_count; ++row_no)
     {
 
         QString tc_key = ils_excel_file_.get_cell(row_no, COL_TC_KEY).toString();
 
         QString temp_value;
         TABLE_CONFIG tc_data;
-
-        if (tc_key == QString::fromLocal8Bit("表格名称"))
+		
+		//发现一个这个名称，就读取一排数据
+        if (tc_key == QString::fromLocal8Bit("读取的SHEET名称"))
         {
-
             tc_data.excel_table_name_ = ils_excel_file_.get_cell(row_no, COL_TC_VALUE).toString();
             if (tc_data.excel_table_name_.isEmpty())
             {
                 continue;
             }
+			cur_process_sheet = tc_data.excel_table_name_;
+			//如果剩余的数据不够，认为发生错误
+            ++row_no;
+            if (row_no > row_count)
+            {
+				info_imperfect = true;
+                break;
+            }
 
-            ++row_no;
-            if (row_no > row_count)
-            {
-                return -1;
-            }
-            //table id
-            tc_data.table_id_ = ils_excel_file_.get_cell(row_no, COL_TC_VALUE).toInt();
-            if (tc_data.table_id_ <= 0)
-            {
-                return -1;
-            }
-            ++row_no;
-            if (row_no > row_count)
-            {
-                return -1;
-            }
             tc_data.read_data_start_ = ils_excel_file_.get_cell(row_no, COL_TC_VALUE).toInt();
             if (tc_data.read_data_start_ <= 0)
             {
+				error_tips = QString::fromLocal8Bit("SHEET[%1]的起始读取行字段错误，行号从1开始。").
+					arg(tc_data.excel_table_name_);
                 return -1;
             }
-
             ++row_no;
             if (row_no > row_count)
             {
-                return -1;
+				info_imperfect = true;
+				break;
             }
 
-            tc_data.pb_msg_name_ = ils_excel_file_.get_cell(row_no, COL_TC_VALUE).toString();
-            if (tc_data.pb_msg_name_.isEmpty())
+            tc_data.pb_line_message_ = ils_excel_file_.get_cell(row_no, COL_TC_VALUE).toString();
+            if (tc_data.pb_line_message_.isEmpty())
             {
+				error_tips = QString::fromLocal8Bit("SHEET[%1]的对应的Protobuf 对应的行Message必须填写。").
+					arg(tc_data.excel_table_name_);
                 return -1;
             }
-
             ++row_no;
             if (row_no > row_count)
             {
-                return -1;
+				info_imperfect = true;
+				break;
             }
+
             tc_data.pb_fieldname_line_ = ils_excel_file_.get_cell(row_no, COL_TC_VALUE).toInt();
             if (tc_data.pb_fieldname_line_ <= 0)
             {
+				error_tips = QString::fromLocal8Bit("SHEET[%1]的对应的Protobuf 对应的行Message必须填写。").
+					arg(tc_data.excel_table_name_);
                 return -1;
             }
-
             ++row_no;
             if (row_no > row_count)
             {
-                return -1;
-            }
-            tc_data.sqlite3_db_name_ = ils_excel_file_.get_cell(row_no, COL_TC_VALUE).toString();
-            if (tc_data.sqlite3_db_name_.isEmpty())
-            {
-                return -1;
+				info_imperfect = true;
+				break;
             }
 
+			//PB 的配置文件部分，可以为空
+			tc_data.save_pb_config_ = ils_excel_file_.get_cell(row_no, COL_TC_VALUE).toString();
+			++row_no;
+			if (row_no > row_count)
+			{
+				info_imperfect = true;
+				break;
+			}
+			tc_data.pb_list_message_ = ils_excel_file_.get_cell(row_no, COL_TC_VALUE).toString();
+			if (false ==tc_data.save_pb_config_.isEmpty() && true == tc_data.pb_list_message_.isEmpty())
+			{
+				error_tips = QString::fromLocal8Bit("SHEET[%1]如果要求导出Protobuf文件，必须填写对应的List Message结构名称").
+					arg(tc_data.excel_table_name_);
+				return -1;
+			}
+			++row_no;
+			if (row_no > row_count)
+			{
+				info_imperfect = true;
+				break;
+			}
+
+			//db3 name
+            tc_data.save_sqlite3_db_ = ils_excel_file_.get_cell(row_no, COL_TC_VALUE).toString();
+            if (tc_data.save_pb_config_.isEmpty() && tc_data.save_sqlite3_db_.isEmpty())
+            {
+				error_tips = QString::fromLocal8Bit("SHEET[%1]或者导成SQLite3文件或者导成PB编码文件，必选其一。").
+					arg(cur_process_sheet);
+                return -1;
+            }
             ++row_no;
             if (row_no > row_count)
             {
-                return -1;
+				info_imperfect = true;
+				break;
             }
-
+			//table id
+			tc_data.table_id_ = ils_excel_file_.get_cell(row_no, COL_TC_VALUE).toInt();
+			if ( false == tc_data.save_sqlite3_db_.isEmpty() && tc_data.table_id_ <= 0)
+			{
+				return -1;
+			}
+			++row_no;
+			if (row_no > row_count)
+			{
+				info_imperfect = true;
+				break;
+			}
             tc_data.index1_column_ = ils_excel_file_.get_cell(row_no, COL_TC_VALUE).toInt();
-            if (tc_data.index1_column_ <= 0)
-            {
-                return -1;
-            }
-
             ++row_no;
             if (row_no > row_count)
             {
-                return -1;
+				info_imperfect = true;
+				break;
             }
             tc_data.index2_column_ = ils_excel_file_.get_cell(row_no, COL_TC_VALUE).toInt();
             //INDEX 2可以为0
-            //if (tc_data.index2_column_ <= 0)
+			if (false == tc_data.save_sqlite3_db_.isEmpty() &&
+				(tc_data.index1_column_ < 0 || tc_data.index1_column_ < 0))
+			{
+				error_tips = QString::fromLocal8Bit("SHEET[%1]对应的转换SQLite3索引列号必须大于等于0，请检查。").
+					arg(cur_process_sheet);
+				return -1;
+			}
 
             auto result = file_cfg_data.xls_table_cfg_.insert(std::make_pair(tc_data.excel_table_name_, tc_data));
             if (false == result.second)
             {
+				error_tips = QString::fromLocal8Bit("SHEET[%1]的描述重复，请检查").
+					arg(cur_process_sheet);
                 return -2;
             }
         }
@@ -540,13 +585,21 @@ int Populous_Read_Config::read_table_config(EXCEL_FILE_DATA &file_cfg_data)
         }
     }
 
+	if (info_imperfect)
+	{
+		error_tips = QString::fromLocal8Bit("SHEET[%1]的描述信息缺失，请检查").
+			arg(cur_process_sheet);
+		return -3;
+	}
+	
     return 0;
 }
 
 
 //读取表格数据read_table_data
-int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
-                                             ARRARY_OF_AI_IIJIMA_BINARY *aiiijma_ary)
+int Populous_Read_Config::read_sheet_cfgdata(TABLE_CONFIG &tc_data,
+											 ARRARY_OF_AI_IIJIMA_BINARY *aiiijma_ary,
+											 QString &error_tips)
 {
     int ret = 0;
     //检查EXCEL文件中是否有这个表格
@@ -554,9 +607,9 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
     {
         return -3;
     }
-
+	
     google::protobuf::Message *tmp_msg = NULL;
-    ret = ils_proto_reflect_.new_mesage(tc_data.pb_msg_name_.toStdString(), tmp_msg);
+    ret = ils_proto_reflect_.new_mesage(tc_data.pb_line_message_.toStdString(), tmp_msg);
     if (ret != 0)
     {
         return ret;
@@ -571,19 +624,28 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
              << " row_count ="
              << line_count
              << "\n";
+	
 
-    QString field_name_string;
+	//如果标识了pb字段行等，但其实没有那么多行
     if (tc_data.pb_fieldname_line_ > line_count || tc_data.read_data_start_ > line_count )
     {
         return -4;
     }
+	//如果标识了读取索引字段，但其实没有那么多列
+	if ((tc_data.index1_column_ > 0 && col_count < tc_data.index1_column_) ||
+		(tc_data.index2_column_ > 0 && col_count < tc_data.index2_column_))
+	{
+		return -5;
+	}
 
-    for (long col_no = 1; col_no <= col_count; ++col_no)
+	QString field_name_string;
+    for (int col_no = 1; col_no <= col_count; ++col_no)
     {
         field_name_string = ils_excel_file_.get_cell(tc_data.pb_fieldname_line_, col_no).toString();
         tc_data.proto_field_ary_.push_back(field_name_string);
 
-
+		//这段到底在干嘛，我自己也只能说个大概了，因为repeated 的字段需要先add message，
+		//所以就必须把一次出现的地方找出来
         int find_pos = tc_data.proto_field_ary_[col_no - 1].lastIndexOf('.');
         if (find_pos != -1)
         {
@@ -638,7 +700,7 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
         if (0 != ret)
         {
             ZCE_LOG(RS_ERROR, "Message [%s] don't find field_desc [%s] field_desc name define in Line/Column[%d/%d(%s)]",
-                    tc_data.pb_msg_name_.toStdString().c_str(),
+                    tc_data.pb_line_message_.toStdString().c_str(),
                     tc_data.proto_field_ary_[col_no - 1].toStdString().c_str(),
                     tc_data.pb_fieldname_line_,
                     col_no,
@@ -689,9 +751,10 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
     QString read_data;
     std::string set_data;
 
-    //读取每一行的数据 ,+1是因为read_data_start_也要读取
-    aiiijma_ary->resize(line_count - tc_data.read_data_start_ + 1);
-    for (long line_no = tc_data.read_data_start_; line_no <= line_count; ++line_no)
+	//读取每一行的数据 ,+1是因为read_data_start_也要读取
+	aiiijma_ary->resize(line_count - tc_data.read_data_start_ + 1);
+	
+    for (int line_no = tc_data.read_data_start_; line_no <= line_count; ++line_no)
     {
         //new_msg->Clear();
 
@@ -721,7 +784,7 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
             //对于BYTES，
             else if (field_desc->type() == google::protobuf::FieldDescriptor::Type::TYPE_BYTES)
             {
-                set_data = read_data.toLatin1();
+                set_data = read_data.toLocal8Bit();
             }
             //其他字段类型统一转换为UTF8的编码
             else
@@ -733,7 +796,7 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
             if (0 != ret)
             {
                 ZCE_LOG(RS_ERROR, "Message [%s] field_desc [%s] type [%d][%s] set_fielddata fail. Line,Colmn[%d|%d(%s)]",
-                        tc_data.pb_msg_name_.toStdString().c_str(),
+                        tc_data.pb_line_message_.toStdString().c_str(),
                         field_desc->full_name().c_str(),
                         field_desc->type(),
                         field_desc->type_name(),
@@ -744,6 +807,7 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
                 return ret;
             }
 
+			index_1 = line_no;
             //读取索引
             if (col_no == tc_data.index1_column_)
             {
@@ -763,23 +827,24 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
         {
             ZCE_LOG(RS_ERROR, "Read line [%d] message [%s] is not IsInitialized, please check your excel or proto file.",
                     line_no,
-                    tc_data.pb_msg_name_.toStdString().c_str());
+                    tc_data.pb_line_message_.toStdString().c_str());
 
             ZCE_LOG(RS_ERROR, "Read line [%d] message [%s] InitializationErrorString :%s;",
                     line_no,
-                    tc_data.pb_msg_name_.toStdString().c_str(),
+                    tc_data.pb_line_message_.toStdString().c_str(),
                     new_msg->InitializationErrorString().c_str());
             return -1;
         }
 
         sstr_stream << "} index_1 :" << index_1 << "index_2" << index_2 << std::endl;
 
-        ret = (*aiiijma_ary)[line_no - tc_data.read_data_start_].protobuf_encode(
-                  index_1, index_2, new_msg.get());
-        if (ret != 0)
-        {
-            return -1;
-        }
+		ret = (*aiiijma_ary)[line_no - tc_data.read_data_start_].protobuf_encode(
+			index_1, index_2, new_msg.get());
+		if (ret != 0)
+		{
+			return -1;
+		}
+		
         std::cout << new_msg->DebugString() << std::endl;
     }
 
@@ -799,11 +864,19 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
 
 
 int Populous_Read_Config::save_to_sqlitedb(const TABLE_CONFIG &table_cfg,
-                                           const ARRARY_OF_AI_IIJIMA_BINARY *aiiijma_ary)
+                                           const ARRARY_OF_AI_IIJIMA_BINARY *aiiijma_ary,
+										   QString &error_tips)
 {
     int ret = 0;
+
+	//如果没有配置导入DB3文件
+	if (table_cfg.save_sqlite3_db_.isEmpty())
+	{
+		return 0;
+	}
+
     QString db3_file = out_db3_path_.path();
-    db3_file += table_cfg.sqlite3_db_name_;
+    db3_file += table_cfg.save_sqlite3_db_;
 
     ZCE_General_Config_Table sqlite_config;
     ret = sqlite_config.open_dbfile(db3_file.toStdString().c_str(), false, true);
@@ -827,8 +900,6 @@ int Populous_Read_Config::save_to_sqlitedb(const TABLE_CONFIG &table_cfg,
 
     return 0;
 }
-
-
 
 
 //!从DB3文件里面读取某个配置表的配置

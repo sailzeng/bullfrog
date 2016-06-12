@@ -94,7 +94,14 @@ public:
     //返回错误信息
     void error_info(PROTO_ERROR_ARRAY &error_ary);
 
-    //根据名称创建Message,new 的message 会保存做出当前处理的message对象
+    
+    /*!
+    * @brief      根据名称创建Message,new 的message 会保存做出当前处理的message对象
+    * @return     int
+    * @param      type_name
+    * @param      new_msg
+    * @note       
+    */
     int new_mesage(const std::string &type_name,
                    google::protobuf::Message *&new_msg);
 
@@ -102,17 +109,21 @@ public:
     void del_message(google::protobuf::Message *&del_msg);
 
     //
-    int set_proc_msg_field(const std::string &field_name,
-                           const std::string &set_data);
-
-    //
 public:
 
-    //!根据fullname，也就是 phone_book.number 设置一个Message的field
+    
+    /*!
+    * @brief      根据fullname，也就是 phone_book.number 设置一个Message的field
+    * @return     int
+    * @param      msg          对应要操作的msg
+    * @param      full_name    字段的全名，如果是多个结构字段可以用.链接
+    * @param      set_data     设置的数据
+    * @param      repeated_add 是否是repeated 字段，是进行添加操作
+    */
     static int set_field(google::protobuf::Message *msg,
                          const std::string &full_name,
                          const std::string &set_data,
-                         bool message_add);
+                         bool repeated_add);
 
     //!根据fullname,得到某个字段的描述信息
     static int get_fielddesc(google::protobuf::Message *msg,
