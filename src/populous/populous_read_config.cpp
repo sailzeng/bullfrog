@@ -181,16 +181,16 @@ int Populous_Read_Config::init_protodir(const QString &proto_dir,
 int Populous_Read_Config::init_outdir(const QString *outer_dir,
 									  QString &error_tips)
 {
-	QString path_str;
+	QString out_path,path_str;
 	if (outer_dir)
 	{
-		path_str = *outer_dir;
+		out_path = *outer_dir;
 	}
 	else
 	{
-		path_str = ".";
+		out_path = ".";
 	}
-
+	path_str = out_path;
 	path_str += "/log";
 	out_log_path_.setPath(path_str);
 	if (false == out_log_path_.exists())
@@ -201,6 +201,7 @@ int Populous_Read_Config::init_outdir(const QString *outer_dir,
 		}
 	}
 	//db3的路径没有可以创建
+	path_str = out_path;
 	path_str += "/db3";
 	out_db3_path_.setPath(path_str);
 	if (false == out_db3_path_.exists())
@@ -211,6 +212,7 @@ int Populous_Read_Config::init_outdir(const QString *outer_dir,
 		}
 	}
 	//pbc的路径没有可以创建
+	path_str = out_path;
 	path_str += "/pbc";
 	out_pbc_path_.setPath(path_str);
 	if (false == out_pbc_path_.exists())
