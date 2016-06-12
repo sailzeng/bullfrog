@@ -193,10 +193,10 @@ public:
 protected:
 
     //!输出日志信息的Mask值,小于这个信息的信息不予以输出
-    ZCE_LOG_PRIORITY      permit_outlevel_;
+    ZCE_LOG_PRIORITY      permit_outlevel_ = RS_DEBUG;
 
     //!是否输出日志信息,可以用于暂时屏蔽
-    bool                  if_output_log_;
+    bool                  if_output_log_ = true;
 
 };
 

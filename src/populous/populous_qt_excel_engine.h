@@ -36,13 +36,13 @@
 *             
 * note       代码风格我打算全部采用Qt的代码风格。
 */
-class QtExcelEngine : protected QObject
+class PopulousQtExcelEngine : protected QObject
 {
 public:
 
     //构造函数和析构函数
-    QtExcelEngine();
-    ~QtExcelEngine();
+    PopulousQtExcelEngine();
+    ~PopulousQtExcelEngine();
 
 public:
 
@@ -139,7 +139,7 @@ protected:
 
 public:
 
-	static char *QtExcelEngine::column_name(int column_no);
+	static char *PopulousQtExcelEngine::column_name(int column_no);
 
 private:
 

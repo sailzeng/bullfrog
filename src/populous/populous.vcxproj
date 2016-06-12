@@ -83,7 +83,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../zcelib;$(QTDIR)\include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../zcelib;$(QTDIR)/include</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>populous_predefine.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -110,7 +110,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>../zcelib;$(QTDIR)\include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../zcelib;$(QTDIR)/include</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>populous_predefine.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -135,9 +135,6 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <Text Include="ReadMe.txt" />
-  </ItemGroup>
   <ItemGroup>
     <ClCompile Include="populous_predefine.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

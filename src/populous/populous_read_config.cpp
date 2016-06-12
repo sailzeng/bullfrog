@@ -599,7 +599,8 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
                 else
                 {
                     tc_data.firstshow_field_ = field_name_string;
-                    tc_data.firstshow_msg_.append(field_name_string.unicode(), find_pos + 1);
+                    tc_data.firstshow_msg_.append(field_name_string.constData(),
+												  find_pos + 1);
                     tc_data.item_msg_firstshow_.push_back(true);
                 }
             }
@@ -635,11 +636,11 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
         if (0 != ret)
         {
             ZCE_LOG(RS_ERROR, "Message [%s] don't find field_desc [%s] field_desc name define in Line/Column[%d/%d(%s)]",
-                    tc_data.pb_msg_name_.unicode(),
-                    tc_data.proto_field_ary_[col_no - 1].unicode(),
+                    tc_data.pb_msg_name_.toStdString().c_str(),
+                    tc_data.proto_field_ary_[col_no - 1].toStdString().c_str(),
                     tc_data.pb_fieldname_line_,
                     col_no,
-                    QtExcelEngine::column_name(col_no)
+                    PopulousQtExcelEngine::column_name(col_no)
                    );
             return ret;
         }
@@ -665,19 +666,20 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
     read_table_log.open(QIODevice::ReadWrite);
     if (!read_table_log.isWritable())
     {
-        ZCE_LOG(RS_ERROR, "Read excel file data log file [%s] open fail.", outlog_filename.unicode());
+        ZCE_LOG(RS_ERROR, "Read excel file data log file [%s] open fail.", 
+				outlog_filename.toStdString().c_str());
         return -1;
     }
     std::stringstream sstr_stream;
 
     //什么？为啥不用google pb 的debugstring直接输出？为啥，自己考虑
-    sstr_stream << "Read excel file:" << xls_file_name.unicode() << " line count" << line_count
+    sstr_stream << "Read excel file:" << xls_file_name.toStdString().c_str() << " line count" << line_count
                 << "column count " << col_count << std::endl;
-    sstr_stream << "Read table:" << tc_data.excel_table_name_.unicode() << std::endl;
+    sstr_stream << "Read table:" << tc_data.excel_table_name_.toStdString().c_str() << std::endl;
 
     ZCE_LOG(RS_INFO, "Read excel file:%s table :%s start. line count %u column %u.",
-            xls_file_name.unicode(),
-            tc_data.excel_table_name_.unicode(),
+            xls_file_name.toStdString().c_str(),
+            tc_data.excel_table_name_.toStdString().c_str(),
             line_count,
             col_count);
 
@@ -729,13 +731,13 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
             if (0 != ret)
             {
                 ZCE_LOG(RS_ERROR, "Message [%s] field_desc [%s] type [%d][%s] set_fielddata fail. Line,Colmn[%d|%d(%s)]",
-                        tc_data.pb_msg_name_.unicode(),
+                        tc_data.pb_msg_name_.toStdString().c_str(),
                         field_desc->full_name().c_str(),
                         field_desc->type(),
                         field_desc->type_name(),
                         line_no,
                         col_no,
-                        QtExcelEngine::column_name(col_no)
+                        PopulousQtExcelEngine::column_name(col_no)
                        );
                 return ret;
             }
@@ -750,7 +752,7 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
                 index_2 = std::stol(set_data, 0, 10);
             }
 
-            sstr_stream << "\t" << tc_data.proto_field_ary_[col_no - 1].unicode() << ":" << set_data.c_str()
+            sstr_stream << "\t" << tc_data.proto_field_ary_[col_no - 1].toStdString().c_str() << ":" << set_data.c_str()
                         << std::endl;
         }
 
@@ -786,8 +788,9 @@ int Populous_Read_Config::read_table_cfgdata(TABLE_CONFIG &tc_data,
     ZCE_LOG(RS_INFO, "\n%s", out_string.c_str());
     read_table_log.write(out_string.c_str(), out_string.length());
 
-    ZCE_LOG(RS_INFO, "Read excel file:%s table :%s end.", xls_file_name.unicode(),
-            tc_data.excel_table_name_.unicode());
+    ZCE_LOG(RS_INFO, "Read excel file:%s table :%s end.",
+			xls_file_name.toStdString().c_str(),
+            tc_data.excel_table_name_.toStdString().c_str());
 
     return 0;
 }
