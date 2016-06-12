@@ -1,5 +1,4 @@
 #include "th_predefine.h"
-#include "QtExcelEngine.h"
 
 int main(int argc, char *argv[])
 {
