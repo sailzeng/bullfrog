@@ -182,9 +182,15 @@ protected:
     * @param      error_tips
     * @note       
     */
-    int read_sheet_cfgdata(TABLE_CONFIG &table_cfg,
+    int read_sheet_db3data(TABLE_CONFIG &table_cfg,
                            ARRARY_OF_AI_IIJIMA_BINARY *aiiijma_ary,
 						   QString &error_tips);
+
+
+	int read_sheet_pbcdata(TABLE_CONFIG &table_cfg,
+						   google::protobuf::Message *&list_msg,
+						   QString &error_tips);
+
 
     
     /*!
@@ -200,7 +206,7 @@ protected:
 
 
 	int save_to_protocfg(const TABLE_CONFIG &table_cfg,
-						 const ARRARY_OF_AI_IIJIMA_BINARY *aiiijma_ary,
+						 const google::protobuf::Message *line_msg,
 						 QString &error_tips);
 
 	/*!
@@ -246,9 +252,10 @@ protected:
 
     //单子实例
     static Populous_Read_Config  *instance_;
-
+	
+	//
+	static char REPEATED_STRING[];
 protected:
-
 
 	//!EXCEL配置存放的目录
 	QDir excel_path_;

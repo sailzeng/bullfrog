@@ -128,6 +128,7 @@
       <AssemblerOutput>NoListing</AssemblerOutput>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
+      <AdditionalIncludeDirectories>$(SolutionDir)../depend/protobuf-2.6.1/src;$(SolutionDir)../depend/sqlite-3.8.8.1;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -163,6 +164,7 @@
       <TreatWarningAsError>false</TreatWarningAsError>
       <PrecompiledHeaderFile>zce_predefine.h</PrecompiledHeaderFile>
       <ProgramDataBaseFileName>$(OutDir)$(TargetName).pdb</ProgramDataBaseFileName>
+      <AdditionalIncludeDirectories>$(SolutionDir)../depend/protobuf-2.6.1/src;$(SolutionDir)../depend/sqlite-3.8.8.1;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

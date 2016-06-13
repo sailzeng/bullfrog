@@ -86,3 +86,7 @@ message GAME_CFG_STRUCT_2
 	required ENUM_COUNTRY s2_j = 10;
 }
 
+message LIST_OF_GAME_CFG_STRUCT_2
+{
+    repeated GAME_CFG_STRUCT_2 list_data = 1;
+}

@@ -27,3 +27,7 @@ message GAME_CFG_STRUCT_1
 	optional ENUM_WEEK s1_l = 12;
 }
 
+message LIST_OF_GAME_CFG_STRUCT_1
+{
+    repeated GAME_CFG_STRUCT_1 list_data = 1;
+}

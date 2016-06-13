@@ -2,6 +2,8 @@
 #include "populous_read_config.h"
 
 
+char Populous_Read_Config::REPEATED_STRING[] = "list_data";
+
 //处理的单子实例
 Populous_Read_Config *Populous_Read_Config::instance_ = NULL;
 
@@ -348,17 +350,37 @@ int Populous_Read_Config::read_one_excel(const QString &open_file,
 			continue;
 		}
 		already_read = true;
-        ret = read_sheet_cfgdata(iter_tmp->second, &fandaoai_ary, error_tips);
-        if (0 != ret)
-        {
-            return ret;
-        }
 
-        ret = save_to_sqlitedb(iter_tmp->second, &fandaoai_ary, error_tips);
-        if (0 != ret)
-        {
-            return ret;
-        }
+		//如果有配置导入DB3文件
+		if (iter_tmp->second.save_sqlite3_db_.isEmpty() == false)
+		{
+			ret = read_sheet_db3data(iter_tmp->second, &fandaoai_ary, error_tips);
+			if (0 != ret)
+			{
+				return ret;
+			}
+
+			ret = save_to_sqlitedb(iter_tmp->second, &fandaoai_ary, error_tips);
+			if (0 != ret)
+			{
+				return ret;
+			}
+		}
+		if (iter_tmp->second.save_pb_config_.isEmpty() == false)
+		{
+			google::protobuf::Message *list_msg = NULL;
+			ret = read_sheet_pbcdata(iter_tmp->second, list_msg, error_tips);
+			if (0 != ret)
+			{
+				return ret;
+			}
+
+			ret = save_to_protocfg(iter_tmp->second, list_msg, error_tips);
+			if (0 != ret)
+			{
+				return ret;
+			}
+		}
     }
 	//如果没有读取,理论上前面检查了表格是否存在
 	if (!already_read)
@@ -597,7 +619,7 @@ int Populous_Read_Config::read_table_config(EXCEL_FILE_DATA &file_cfg_data,
 
 
 //读取表格数据read_table_data
-int Populous_Read_Config::read_sheet_cfgdata(TABLE_CONFIG &tc_data,
+int Populous_Read_Config::read_sheet_db3data(TABLE_CONFIG &tc_data,
 											 ARRARY_OF_AI_IIJIMA_BINARY *aiiijma_ary,
 											 QString &error_tips)
 {
@@ -862,18 +884,254 @@ int Populous_Read_Config::read_sheet_cfgdata(TABLE_CONFIG &tc_data,
     return 0;
 }
 
+int Populous_Read_Config::read_sheet_pbcdata(TABLE_CONFIG &tc_data, 
+											 google::protobuf::Message *&list_msg, 
+											 QString & error_tips)
+{
+	int ret = 0;
+	//检查EXCEL文件中是否有这个表格
+	if (ils_excel_file_.load_sheet(tc_data.excel_table_name_) == FALSE)
+	{
+		return -3;
+	}
+
+	ret = ils_proto_reflect_.new_mesage(tc_data.pb_list_message_.toStdString(), list_msg);
+	if (ret != 0)
+	{
+		return ret;
+	}
+
+
+	int line_count = ils_excel_file_.row_count();
+	int col_count = ils_excel_file_.column_count();
+	qDebug() << tc_data.excel_table_name_ <<
+		" table have col_count = "
+		<< col_count
+		<< " row_count ="
+		<< line_count
+		<< "\n";
+
+
+	//如果标识了pb字段行等，但其实没有那么多行
+	if (tc_data.pb_fieldname_line_ > line_count || tc_data.read_data_start_ > line_count)
+	{
+		return -4;
+	}
+	//如果标识了读取索引字段，但其实没有那么多列
+	if ((tc_data.index1_column_ > 0 && col_count < tc_data.index1_column_) ||
+		(tc_data.index2_column_ > 0 && col_count < tc_data.index2_column_))
+	{
+		return -5;
+	}
+
+	QString field_name_string;
+	for (int col_no = 1; col_no <= col_count; ++col_no)
+	{
+		field_name_string = ils_excel_file_.get_cell(tc_data.pb_fieldname_line_, col_no).toString();
+		tc_data.proto_field_ary_.push_back(field_name_string);
+
+		//这段到底在干嘛，我自己也只能说个大概了，因为repeated 的字段需要先add message，
+		//所以就必须把一次出现的地方找出来
+		int find_pos = tc_data.proto_field_ary_[col_no - 1].lastIndexOf('.');
+		if (find_pos != -1)
+		{
+			if (tc_data.firstshow_field_ == field_name_string)
+			{
+				tc_data.item_msg_firstshow_.push_back(true);
+			}
+			else
+			{
+				if (tc_data.firstshow_msg_.length() > 0 &&
+					true == field_name_string.startsWith(tc_data.firstshow_msg_))
+				{
+					tc_data.item_msg_firstshow_.push_back(false);
+				}
+				else
+				{
+					tc_data.firstshow_field_ = field_name_string;
+					tc_data.firstshow_msg_.append(field_name_string.constData(),
+												  find_pos + 1);
+					tc_data.item_msg_firstshow_.push_back(true);
+				}
+			}
+		}
+		else
+		{
+			tc_data.item_msg_firstshow_.push_back(false);
+		}
+
+	}
+
+	std::vector<google::protobuf::Message *> field_msg_ary;
+	std::vector<const google::protobuf::FieldDescriptor *> field_desc_ary;
+
+	//吧啦吧啦吧啦吧啦吧啦吧啦吧啦，这段啰嗦的代码只是为了搞个日志的名字,EXCEFILENAE_TABLENAME.log
+	QString xls_file_name;
+	xls_file_name = ils_excel_file_.open_filename();
+	QFileInfo xls_fileinfo(xls_file_name);
+	QString file_basename = xls_fileinfo.baseName();
+
+	QString log_file_name = file_basename;
+	log_file_name += "_";
+	log_file_name += tc_data.excel_table_name_;
+	log_file_name += ".log";
+	QString outlog_filename = out_log_path_.path();
+	outlog_filename += "/";
+	outlog_filename += log_file_name;
+
+	QFile read_table_log(outlog_filename);
+	read_table_log.open(QIODevice::ReadWrite);
+	if (!read_table_log.isWritable())
+	{
+		ZCE_LOG(RS_ERROR, "Read excel file data log file [%s] open fail.",
+				outlog_filename.toStdString().c_str());
+		return -1;
+	}
+	std::stringstream sstr_stream;
+
+	//什么？为啥不用google pb 的debugstring直接输出？为啥，自己考虑
+	sstr_stream << "Read excel file:" << xls_file_name.toStdString().c_str() << " line count" << line_count
+		<< "column count " << col_count << std::endl;
+	sstr_stream << "Read table:" << tc_data.excel_table_name_.toStdString().c_str() << std::endl;
+
+	ZCE_LOG(RS_INFO, "Read excel file:%s table :%s start. line count %u column %u.",
+			xls_file_name.toStdString().c_str(),
+			tc_data.excel_table_name_.toStdString().c_str(),
+			line_count,
+			col_count);
+
+	QString read_data;
+	std::string set_data;
+
+	for (int line_no = tc_data.read_data_start_; line_no <= line_count; ++line_no)
+	{
+		google::protobuf::Message *line_msg = NULL;
+		Illusion_Protobuf_Reflect::locate_sub_msg(list_msg,
+												  "list_data",
+												  true,
+												  line_msg);
+
+		google::protobuf::Message *field_msg = NULL;
+		const google::protobuf::FieldDescriptor *field_desc = NULL;
+		for (int col_no = 1; col_no <= col_count; ++col_no)
+		{
+			//如果为空表示不需要关注这列
+			if (tc_data.proto_field_ary_[col_no - 1].length() == 0)
+			{
+				field_msg_ary.push_back(NULL);
+				field_desc_ary.push_back(NULL);
+				continue;
+			}
+
+			//取得字段的描述
+			ret = Illusion_Protobuf_Reflect::get_fielddesc(line_msg,
+														   tc_data.proto_field_ary_[col_no - 1].toStdString(),
+														   tc_data.item_msg_firstshow_[col_no - 1] == 1 ? true : false,
+														   field_msg,
+														   field_desc);
+			if (0 != ret)
+			{
+				ZCE_LOG(RS_ERROR, "Message [%s] don't find field_desc [%s] field_desc name define in Line/Column[%d/%d(%s)]",
+						tc_data.pb_line_message_.toStdString().c_str(),
+						tc_data.proto_field_ary_[col_no - 1].toStdString().c_str(),
+						tc_data.pb_fieldname_line_,
+						col_no,
+						PopulousQtExcelEngine::column_name(col_no)
+				);
+				return ret;
+			}
+			field_msg_ary.push_back(field_msg);
+			field_desc_ary.push_back(field_desc);
+		}
+		ZCE_LOG(RS_ERROR, "Read line [%d] ", line_no);
+		sstr_stream << "Read line:" << line_no << std::endl << "{" << std::endl;
+
+		for (long col_no = 1; col_no <= col_count; ++col_no)
+		{
+			//如果为空表示不需要关注这列
+			if (tc_data.proto_field_ary_[col_no - 1].length() == 0)
+			{
+				continue;
+			}
+
+			//读出EXCEL数据，注意这个地方是根据MFC的编码决定CString数据的编码
+			read_data = ils_excel_file_.get_cell(line_no, col_no).toString();
+
+			//取得字段的描述
+			field_msg = field_msg_ary[col_no - 1];
+			field_desc = field_desc_ary[col_no - 1];
+
+			//如果是string 类型，Google PB之支持UTF8
+			if (field_desc->type() == google::protobuf::FieldDescriptor::Type::TYPE_STRING)
+			{
+				set_data = read_data.toStdString();
+			}
+			//对于BYTES，
+			else if (field_desc->type() == google::protobuf::FieldDescriptor::Type::TYPE_BYTES)
+			{
+				set_data = read_data.toLocal8Bit();
+			}
+			//其他字段类型统一转换为UTF8的编码
+			else
+			{
+				set_data = read_data.toStdString();
+			}
+			//根据描述，设置字段的数据
+			ret = Illusion_Protobuf_Reflect::set_fielddata(field_msg, field_desc, set_data);
+			if (0 != ret)
+			{
+				ZCE_LOG(RS_ERROR, "Message [%s] field_desc [%s] type [%d][%s] set_fielddata fail. Line,Colmn[%d|%d(%s)]",
+						tc_data.pb_line_message_.toStdString().c_str(),
+						field_desc->full_name().c_str(),
+						field_desc->type(),
+						field_desc->type_name(),
+						line_no,
+						col_no,
+						PopulousQtExcelEngine::column_name(col_no)
+				);
+				return ret;
+			}
+
+			sstr_stream << "\t" << tc_data.proto_field_ary_[col_no - 1].toStdString().c_str() << ":" << set_data.c_str()
+				<< std::endl;
+		}
+
+		//如果没有初始化
+		if (!line_msg->IsInitialized())
+		{
+			ZCE_LOG(RS_ERROR, "Read line [%d] message [%s] is not IsInitialized, please check your excel or proto file.",
+					line_no,
+					tc_data.pb_line_message_.toStdString().c_str());
+
+			ZCE_LOG(RS_ERROR, "Read line [%d] message [%s] InitializationErrorString :%s;",
+					line_no,
+					tc_data.pb_line_message_.toStdString().c_str(),
+					line_msg->InitializationErrorString().c_str());
+			return -1;
+		}
+
+		std::cout << line_msg->DebugString() << std::endl;
+	}
+
+	std::string out_string;
+	out_string.reserve(64 * 1024 * 1024);
+	out_string = sstr_stream.str();
+
+	ZCE_LOG(RS_INFO, "\n%s", out_string.c_str());
+	read_table_log.write(out_string.c_str(), out_string.length());
+
+	ZCE_LOG(RS_INFO, "Read excel file:%s table :%s end.",
+			xls_file_name.toStdString().c_str(),
+			tc_data.excel_table_name_.toStdString().c_str());
+	return 0;
+}
+
 
 int Populous_Read_Config::save_to_sqlitedb(const TABLE_CONFIG &table_cfg,
                                            const ARRARY_OF_AI_IIJIMA_BINARY *aiiijma_ary,
 										   QString &error_tips)
 {
     int ret = 0;
-
-	//如果没有配置导入DB3文件
-	if (table_cfg.save_sqlite3_db_.isEmpty())
-	{
-		return 0;
-	}
 
     QString db3_file = out_db3_path_.path();
     db3_file += table_cfg.save_sqlite3_db_;
@@ -899,6 +1157,14 @@ int Populous_Read_Config::save_to_sqlitedb(const TABLE_CONFIG &table_cfg,
     }
 
     return 0;
+}
+
+int Populous_Read_Config::save_to_protocfg(const TABLE_CONFIG & table_cfg, 
+										   const google::protobuf::Message * line_msg, 
+										   QString & error_tips)
+{
+
+	return 0;
 }
 
 
