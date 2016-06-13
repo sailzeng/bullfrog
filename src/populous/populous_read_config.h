@@ -205,6 +205,14 @@ protected:
 						 QString &error_tips);
 
 
+	/*!
+	* @brief      将数据保存到Proto buf config 配置文件里面
+	* @return     int
+	* @param      table_cfg
+	* @param      line_msg
+	* @param      error_tips
+	* @note       
+	*/
 	int save_to_protocfg(const TABLE_CONFIG &table_cfg,
 						 const google::protobuf::Message *line_msg,
 						 QString &error_tips);

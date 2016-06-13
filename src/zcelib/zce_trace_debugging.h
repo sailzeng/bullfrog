@@ -143,6 +143,7 @@ public:
 
         //得到打印信息,_vsnprintf为特殊函数
         vfprintf(stderr, str_format, args);
+		fprintf(stderr, "\n");
     }
 
     //写日志

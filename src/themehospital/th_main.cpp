@@ -4,8 +4,8 @@ int main(int argc, char *argv[])
 {
 	int ret = 0;
 	QCoreApplication a(argc, argv);
-
-	BOOL bret = ::SetConsoleOutputCP(CP_UTF8);
+	BOOL bret = false;
+	bret = ::SetConsoleOutputCP(936);
 	if (bret == FALSE)
 	{
 	    return -1;
@@ -17,13 +17,15 @@ int main(int argc, char *argv[])
 	    return -1;
 	}
 	//设置屏幕缓冲区和输出屏幕大小
-	COORD coord = { 161, 481 };
+	
+	COORD coord = { 121,  301};
 	bret = ::SetConsoleScreenBufferSize(handle_out, coord);
 	if (bret == FALSE)
 	{
-	    return -1;
+		DWORD ret_error= ::GetLastError();
+		//
 	}
-	SMALL_RECT rect = { 0, 0, 160, 48 };
+	SMALL_RECT rect = { 0, 0, 120, 60 };
 	bret = ::SetConsoleWindowInfo(handle_out, TRUE, &rect);
 	if (bret == FALSE)
 	{

@@ -764,8 +764,8 @@ int Populous_Read_Config::read_sheet_db3data(TABLE_CONFIG &tc_data,
     sstr_stream << "Read table:" << tc_data.excel_table_name_.toStdString().c_str() << std::endl;
 
     ZCE_LOG(RS_INFO, "Read excel file:%s table :%s start. line count %u column %u.",
-            xls_file_name.toStdString().c_str(),
-            tc_data.excel_table_name_.toStdString().c_str(),
+            xls_file_name.toLocal8Bit().toStdString().c_str(),
+            tc_data.excel_table_name_.toLocal8Bit().toStdString().c_str(),
             line_count,
             col_count);
 
@@ -1013,6 +1013,8 @@ int Populous_Read_Config::read_sheet_pbcdata(TABLE_CONFIG &tc_data,
 
 		google::protobuf::Message *field_msg = NULL;
 		const google::protobuf::FieldDescriptor *field_desc = NULL;
+		field_msg_ary.clear();
+		field_desc_ary.clear();
 		for (int col_no = 1; col_no <= col_count; ++col_no)
 		{
 			//如果为空表示不需要关注这列
@@ -1119,7 +1121,7 @@ int Populous_Read_Config::read_sheet_pbcdata(TABLE_CONFIG &tc_data,
 
 	ZCE_LOG(RS_INFO, "\n%s", out_string.c_str());
 	read_table_log.write(out_string.c_str(), out_string.length());
-
+	read_table_log.close();
 	ZCE_LOG(RS_INFO, "Read excel file:%s table :%s end.",
 			xls_file_name.toStdString().c_str(),
 			tc_data.excel_table_name_.toStdString().c_str());
@@ -1133,7 +1135,7 @@ int Populous_Read_Config::save_to_sqlitedb(const TABLE_CONFIG &table_cfg,
 {
     int ret = 0;
 
-    QString db3_file = out_db3_path_.path();
+    QString db3_file = out_db3_path_.path() + "/";
     db3_file += table_cfg.save_sqlite3_db_;
 
     ZCE_General_Config_Table sqlite_config;
@@ -1163,7 +1165,52 @@ int Populous_Read_Config::save_to_protocfg(const TABLE_CONFIG & table_cfg,
 										   const google::protobuf::Message * line_msg, 
 										   QString & error_tips)
 {
+	QString pbc_file = out_pbc_path_.path() + "/";
+	pbc_file += table_cfg.save_pb_config_;
+	QString txt_file = pbc_file + ".txt";
+	QFile pbc_config(pbc_file);
+	pbc_config.open(QIODevice::ReadWrite);
+	if (!pbc_config.isWritable())
+	{
+		return -1;
+	}
+	QFile txt_config(txt_file);
+	txt_config.open(QIODevice::ReadWrite);
+	if (!txt_config.isWritable())
+	{
+		return -1;
+	}
+	if (!line_msg->IsInitialized())
+	{
+		ZCE_LOG(RS_ERROR, "class [%s] protobuf encode fail, IsInitialized return false.error string [%s].",
+				line_msg->GetTypeName().c_str(),
+				line_msg->InitializationErrorString().c_str());
+		return -1;
+	}
+	std::string bin_string, txt_string;
+	bool succ = line_msg->SerializeToString(&bin_string);
+	if (!succ)
+	{
+		return -2;
+	}
+	succ = google::protobuf::TextFormat::PrintToString(*line_msg, &txt_string);
+	if (!succ)
+	{
+		return -2;
+	}
+	qint64 wt_len = pbc_config.write(bin_string.c_str(), bin_string.length());
+	if (wt_len < 0)
+	{
+		return -3;
+	}
+	pbc_config.close();
 
+	wt_len = txt_config.write(txt_string.c_str(), txt_string.length());
+	if (wt_len < 0)
+	{
+		return -4;
+	}
+	txt_config.close();
 	return 0;
 }
 
